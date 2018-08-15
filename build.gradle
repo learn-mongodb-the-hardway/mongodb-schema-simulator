@@ -69,6 +69,7 @@ subprojects {
         compile "io.github.microutils:kotlin-logging:$kotlinLoggingVersion"
         compile "com.beust:klaxon:$klaxonVersion"
         compile "org.mongodb:mongodb-driver:$mongodbDriverVersion"
+        compile group: 'com.github.javafaker', name: 'javafaker', version: '0.15'
 
         testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
         testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"

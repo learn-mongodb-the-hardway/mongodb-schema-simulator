@@ -1,5 +1,6 @@
 package com.mtools.schemasimulator.schemas
 
+import com.github.javafaker.Faker
 import org.junit.Test
 
 class SchemaTest {
@@ -7,7 +8,9 @@ class SchemaTest {
     fun renderSimpleTemplate() {
         val template = template {
             field("_id", ObjectIdType)
-            field("name", StringType)
+            field("name", StringType) {
+                fullName()
+            }
             field("price", DecimalType)
         }
 
