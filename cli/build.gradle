@@ -1,0 +1,42 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+ext {
+    kotlinArgparserVersion = '2.0.3'
+}
+
+apply plugin: 'application'
+
+applicationDefaultJvmArgs = ["-Xmx16g"]
+mainClassName = "com.mtools.schemasimulator.cli.MainKt"
+
+repositories {
+    maven { url "https://dl.bintray.com/xenomachina/maven" }
+}
+
+dependencies {
+    compile project(':schema')
+
+    compile "com.xenomachina:kotlin-argparser:$kotlinArgparserVersion"
+    compile "ch.qos.logback:logback-classic:$logbackVersion"
+
+    runtime fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+distributions {
+    main {
+        baseName = archivesBaseName
+    }
+}
+
+processResources {
+    filter(ReplaceTokens, tokens: [
+        "name": project.property("name"),
+        "version": project.property("version"),
+        "gitRev": grgit.open().head().id
+    ])
+}
+
+startScripts {
+    applicationName = "$archivesBaseName"
+    classpath = files("lib/*")
+}
