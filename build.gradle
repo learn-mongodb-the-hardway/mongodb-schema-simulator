@@ -76,6 +76,7 @@ subprojects {
         testCompile "org.jetbrains.kotlin:kotlin-test"
         testCompile "org.jetbrains.kotlin:kotlin-test-junit"
         testCompile "com.natpryce:hamkrest:$hamkrestVersion"
+        testCompile "io.mockk:mockk:1.8.6"
 
         testRuntime "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
         testRuntime "ch.qos.logback:logback-classic:$logbackVersion"

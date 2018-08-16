@@ -76,6 +76,12 @@ class DoubleGenerator(val maxNumberOfDecimals: Int = 2, val min: Int = 0, val ma
     }
 }
 
+class IntegerGenerator() : Generator {
+    override fun generate() : Any {
+        return Faker().number().randomDigitNotZero()
+    }
+}
+
 class ObjectIdGenerator : Generator {
     override fun generate() : Any {
         return ObjectId()
@@ -88,9 +94,7 @@ class Decimal128TypeGenerator(val min: Double = Double.MIN_VALUE, val max: Doubl
     }
 }
 
-class PrimitiveFieldHelper(val name: String, val type: Type): Helper<PrimitiveField>() {
-    var generator: Generator? = null
-
+class PrimitiveFieldHelper(val name: String, val type: Type, var generator: Generator?): Helper<PrimitiveField>() {
     override fun build(): PrimitiveField {
         if (generator == null) {
             generator = when (type) {
@@ -119,8 +123,8 @@ class PrimitiveFieldHelper(val name: String, val type: Type): Helper<PrimitiveFi
 sealed class FieldCollectionHelper<T>() : Helper<T>() {
     val fields = mutableListOf<Field>()
 
-    fun field(name: String, type: Type, init: PrimitiveFieldHelper.() -> Unit = {}) {
-        val b = PrimitiveFieldHelper(name, type)
+    fun field(name: String, type: Type, generator: Generator? = null, init: PrimitiveFieldHelper.() -> Unit = {}) {
+        val b = PrimitiveFieldHelper(name, type, generator)
         b.init()
         fields += b.build()
     }

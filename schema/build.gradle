@@ -1,5 +1,2 @@
 dependencies {
-    test {
-        include 'com/mongodb/migrator/recommendation/**'
-    }
 }
