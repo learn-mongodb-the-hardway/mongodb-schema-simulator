@@ -13,19 +13,42 @@ sealed class Helper<T> {
     abstract fun build(): T
 }
 
-interface Field {}
+interface Field {
+    val name: String?
+    operator fun get(name: String): Field?
+}
 
-class PrimitiveField(val name: String, val type: Type, val generator: Generator): Field
-
-class Document(val name: String? = null, val fields: MutableList<Field> = mutableListOf()): Field {
-    fun add(field: Field) {
-        fields += field
+class PrimitiveField(override val name: String, val type: Type, val generator: Generator): Field {
+    override operator fun get(name: String): Field? {
+        return null
     }
 }
 
-class DocumentArray(val name: String, val fields: MutableList<Field> = mutableListOf()): Field {
-    fun add(field: Field) {
+class Document(override val name: String? = null, val fields: MutableList<Field> = mutableListOf()): Field {
+    operator fun plus(field: Field) {
         fields += field
+    }
+
+    operator fun plusAssign(field: Field) {
+        fields += field
+    }
+
+    override operator fun get(name: String): Field? {
+        return fields.firstOrNull { it.name == name}
+    }
+}
+
+class DocumentArray(override val name: String, val fields: MutableList<Field> = mutableListOf()): Field {
+    operator fun plus(field: Field) {
+        fields += field
+    }
+
+    operator fun plusAssign(field: Field) {
+        fields += field
+    }
+
+    override operator fun get(name: String): Field? {
+        return fields.firstOrNull { it.name == name}
     }
 }
 
@@ -93,81 +116,43 @@ class PrimitiveFieldHelper(val name: String, val type: Type): Helper<PrimitiveFi
     }
 }
 
-class DocumentTemplateHelper: Helper<DocumentTemplate>() {
-    val document = Document()
-
-    override fun build(): DocumentTemplate {
-        return DocumentTemplate(document)
-    }
+sealed class FieldCollectionHelper<T>() : Helper<T>() {
+    val fields = mutableListOf<Field>()
 
     fun field(name: String, type: Type, init: PrimitiveFieldHelper.() -> Unit = {}) {
         val b = PrimitiveFieldHelper(name, type)
         b.init()
-        document.add(b.build())
+        fields += b.build()
     }
 
     fun arrayOf(name: String, init: ArrayHelper.() -> Unit = {}) {
         val b = ArrayHelper(name)
         b.init()
-        document.add(b.build())
+        fields += b.build()
     }
 
     fun documentOf(name: String, init: DocumentHelper.() -> Unit = {}) {
         val b = DocumentHelper(name)
         b.init()
-        document.add(b.build())
+        fields += b.build()
     }
 }
 
-class DocumentHelper(val name: String) : Helper<Document>() {
-    val fields = mutableListOf<Field>()
+class DocumentTemplateHelper: FieldCollectionHelper<DocumentTemplate>() {
+    override fun build(): DocumentTemplate {
+        return DocumentTemplate(Document(null, fields))
+    }
+}
 
+class DocumentHelper(val name: String) : FieldCollectionHelper<Document>() {
     override fun build(): Document {
         return Document(name, fields)
     }
-
-    fun field(name: String, type: Type, init: PrimitiveFieldHelper.() -> Unit) {
-        val b = PrimitiveFieldHelper(name, type)
-        b.init()
-        fields += b.build()
-    }
-
-    fun arrayOf(name: String, init: ArrayHelper.() -> Unit = {}) {
-        val b = ArrayHelper(name)
-        b.init()
-        fields += b.build()
-    }
-
-    fun documentOf(name: String, init: DocumentHelper.() -> Unit = {}) {
-        val b = DocumentHelper(name)
-        b.init()
-        fields += b.build()
-    }
 }
 
-class ArrayHelper(val name: String): Helper<DocumentArray>() {
-    val fields = mutableListOf<Field>()
-
+class ArrayHelper(val name: String): FieldCollectionHelper<DocumentArray>() {
     override fun build(): DocumentArray {
         return DocumentArray(name, fields)
-    }
-
-    fun field(name: String, type: Type, init: PrimitiveFieldHelper.() -> Unit) {
-        val b = PrimitiveFieldHelper(name, type)
-        b.init()
-        fields += b.build()
-    }
-
-    fun arrayOf(name: String, init: ArrayHelper.() -> Unit = {}) {
-        val b = ArrayHelper(name)
-        b.init()
-        fields += b.build()
-    }
-
-    fun documentOf(name: String, init: DocumentHelper.() -> Unit = {}) {
-        val b = DocumentHelper(name)
-        b.init()
-        fields += b.build()
     }
 }
 
