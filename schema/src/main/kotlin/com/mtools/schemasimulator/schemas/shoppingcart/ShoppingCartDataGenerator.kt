@@ -18,24 +18,42 @@ import org.bson.Document
 
 class ShoppingCartDataGenerator(val db: MongoDatabase): DataGenerator {
     override fun generate(options: Map<String, Any>) {
+        val maxDocumentsInBatch = 1000
         // Collections
         val productCollection = db.getCollection("products")
         val inventoryCollection = db.getCollection("inventories")
+        val products = mutableListOf<Document>()
+        val inventories = mutableListOf<Document>()
 
         // Extract the options
         val numberOfDocuments = if (options["numberOfDocuments"] != null) options["numberOfDocuments"] as Int else 1000
+
         // Generate the numberOfExpected product documents
         for (i in 0 until numberOfDocuments) {
-            DocumentGenerator(template {
+            products += DocumentGenerator(template {
                 field("_id", ObjectIdType)
                 field("name", StringType, ProductNameGenerator())
                 field("price", DoubleType, DoubleGenerator())
             }).forEach {
-                DocumentGenerator(template {
+                inventories += DocumentGenerator(template {
                     field("_id", ObjectIdType)
                     field("quantity", IntegerType.INT32, IntegerGenerator())
-                }).insert(inventoryCollection, mapOf("_id" to it["_id"]!!))
-            }.insert(productCollection)
+                }).generate(mapOf("_id" to it["_id"]!!))
+            }.generate()
+
+            insertDocumentsList(products, maxDocumentsInBatch, productCollection)
+            insertDocumentsList(inventories, maxDocumentsInBatch, inventoryCollection)
+        }
+
+        // Insert leftover documents
+        if (products.size > 0) productCollection.insertMany(products)
+        if (inventories.size > 0) inventoryCollection.insertMany(inventories)
+    }
+
+    private fun insertDocumentsList(list: MutableList<Document>, maxDocumentsInBatch: Int, collection: MongoCollection<Document>) {
+        if (list.size == maxDocumentsInBatch) {
+            collection.insertMany(list)
+            list.clear()
         }
     }
 }
