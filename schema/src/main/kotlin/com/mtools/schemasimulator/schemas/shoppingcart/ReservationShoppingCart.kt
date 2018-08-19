@@ -18,6 +18,53 @@ interface Action {
     fun execute(values: Map<String, Any>) : Map<String, Any>
 }
 
+class ExpireCarts(private val carts: MongoCollection<Document>,
+                  private val inventories: MongoCollection<Document>) : Action {
+    override fun execute(values: Map<String, Any>): Map<String, Any> {
+        if (!values.containsKey("cutOffDate")) {
+            throw SchemaSimulatorException("a cutOffDate must be passed into AddProductToShoppingCart")
+        }
+
+        carts.find(Document(mapOf(
+            "modifiedOn" to mapOf(
+                "\$lte" to values["cutOffDate"],
+                "state" to "active"
+            )
+        ))).forEach { cart ->
+            val products = cart["products"] as Array<Document>
+            products.forEach { product ->
+
+                // Return the quantity to the inventory from the cart
+                inventories.updateOne(Document(mapOf(
+                    "_id" to product["_id"],
+                    "reservations._id" to cart["_id"],
+                    "reservations.quantity" to product["quantity"]
+                )), Document(mapOf(
+                    "\$inc" to mapOf(
+                        "quantity" to product["quantity"]
+                    ),
+                    "\$pull" to mapOf(
+                        "reservations" to mapOf(
+                            "_id" to cart["_id"]
+                        )
+                    )
+                )))
+
+                // Set the cart to expires
+                carts.updateOne(Document(mapOf(
+                    "_id" to cart["_id"]
+                )), Document(mapOf(
+                    "\$set" to mapOf(
+                        "status" to "expired"
+                    )
+                )))
+            }
+        }
+
+        return mapOf()
+    }
+}
+
 class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Document>,
                                            private val inventories: MongoCollection<Document>) : Action {
     override fun execute(values: Map<String, Any>): Map<String, Any> {
