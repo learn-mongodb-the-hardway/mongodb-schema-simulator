@@ -1,28 +1,79 @@
 package com.mtools.schemasimulator.schemas.shoppingcart
 
 import com.mongodb.client.MongoCollection
-import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.UpdateOptions
-import com.mtools.schemasimulator.schemas.Scenario
 import org.bson.Document
 import java.util.*
 
-abstract class ShoppingCart(val db: MongoDatabase): Scenario {
-
-    fun setup() {}
-
-    fun teardown() {}
-}
+//abstract class ShoppingCart(val db: MongoDatabase): Scenario {
+//
+//    fun setup() {}
+//
+//    fun teardown() {}
+//}
 
 interface Action {
     fun execute(values: Map<String, Any>) : Map<String, Any>
+}
+
+class CheckoutCart(private val carts: MongoCollection<Document>,
+                   private val inventories: MongoCollection<Document>,
+                   private val orders: MongoCollection<Document>) : Action {
+    override fun execute(values: Map<String, Any>): Map<String, Any> {
+        if (!values.containsKey("userId")
+            || !values.containsKey("name")
+            || !values.containsKey("address")
+            || !values.containsKey("payment")) {
+            throw SchemaSimulatorException("a userId, name, payment and product must be passed into CheckoutCart")
+        }
+
+        val cart = carts.find(Document(mapOf(
+            "_id" to values["userId"],
+            "state" to "active"
+        ))).first()
+
+        cart ?: throw SchemaSimulatorException("could not locate the cart for the user ${values["userId"]}")
+
+        // Insert an order document
+        orders.insertOne(Document(mapOf(
+            "createdOn" to Date(),
+            "shipping" to mapOf(
+                "name" to values["name"],
+                "address" to values["address"]
+            ),
+            "payment" to values["payment"],
+            "products" to cart["products"]
+        )))
+
+        // Set the cart to complete
+        carts.updateOne(Document(mapOf(
+            "_id" to cart["_id"]
+        )), Document(mapOf(
+            "\$set" to mapOf(
+                "status" to "complete"
+            )
+        )))
+
+        // Pull the product reservation from all inventories
+        inventories.updateMany(Document(mapOf(
+            "reservations._id" to values["userId"]
+        )), Document(mapOf(
+            "\$pull" to mapOf(
+                "reservations" to mapOf(
+                    "_id" to values["userId"]
+                )
+            )
+        )))
+
+        return mapOf()
+    }
 }
 
 class ExpireCarts(private val carts: MongoCollection<Document>,
                   private val inventories: MongoCollection<Document>) : Action {
     override fun execute(values: Map<String, Any>): Map<String, Any> {
         if (!values.containsKey("cutOffDate")) {
-            throw SchemaSimulatorException("a cutOffDate must be passed into AddProductToShoppingCart")
+            throw SchemaSimulatorException("a cutOffDate must be passed into ExpireCarts")
         }
 
         carts.find(Document(mapOf(
