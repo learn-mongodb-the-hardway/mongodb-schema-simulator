@@ -4,50 +4,16 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.schemas.f
+import com.mtools.schemasimulator.schemas.g
+import com.mtools.schemasimulator.schemas.shouldContainValues
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.*
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-
-data class f(val value: Any? = Skip(), val klass: Any? = Skip(), val isNull: Boolean = false) {
-    class Skip
-}
-
-fun Document.shouldContainValues(values: Map<String, f>) {
-    values.forEach { path, fieldValue ->
-        var field: Any = this
-
-        for(part in path.split(".")) {
-            field = when (field) {
-                is Document -> field[part]!!
-                is ArrayList<*> -> field[part.toInt()]
-                is Array<*> -> field[part.toInt()]!!
-                else -> field
-            }
-        }
-
-        // Deal with field value comparision
-        if (fieldValue.value != null
-            && fieldValue.value::class != f.Skip::class) {
-            assertEquals(fieldValue.value, field, "For field $path the expected value ${fieldValue.value} does not match the value $field")
-        }
-
-        // Deal with field type comparison
-        if (fieldValue.klass != null
-            && fieldValue.klass::class != f.Skip::class) {
-            assertEquals(fieldValue.klass::class.qualifiedName, field::class.qualifiedName, "For field $path the expected type ${fieldValue.klass::class.qualifiedName} does not match encountered type ${field::class.qualifiedName}")
-        }
-
-        // Check nullability of field
-        if (!fieldValue.isNull) {
-            assertNotNull(field, "field at path was null, expected not null")
-        }
-    }
-}
 
 class ReservationShoppingCartTest {
     @Test
@@ -61,6 +27,8 @@ class ReservationShoppingCartTest {
         val product = products.find(Document(mapOf(
             "_id" to inventory["_id"]
         ))).first()
+        assertNotNull(inventory)
+        assertNotNull(product)
 
         // Fire the action
         action.execute(mapOf(
@@ -72,6 +40,8 @@ class ReservationShoppingCartTest {
             .find(Document(mapOf("_id" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(cartR)
+        assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf<String, f>(
             "_id" to f(userId, Integer(0), false),
@@ -103,6 +73,8 @@ class ReservationShoppingCartTest {
         val product = products.find(Document(mapOf(
             "_id" to inventory["_id"]
         ))).first()
+        assertNotNull(inventory)
+        assertNotNull(product)
 
         // Make a reservation first so we can modify it
         AddProductToShoppingCart(carts, inventories).execute(mapOf(
@@ -119,6 +91,8 @@ class ReservationShoppingCartTest {
             .find(Document(mapOf("_id" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(cartR)
+        assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf<String, f>(
             "_id" to f(userId, Integer(0), false),
@@ -137,6 +111,63 @@ class ReservationShoppingCartTest {
             "reservations.0._id" to f(userId, Integer(0), false),
             "reservations.0.quantity" to f(2, Integer(0), false),
             "reservations.0.createdOn" to f(f.Skip(), Date(), false)
+        ))
+    }
+
+    @Test
+    fun failUpdateReservationQuantityForAProductDueToLimitedStockTest() {
+        val userId = 3
+        // Attempt to create a shopping cart
+        val inventory = inventories.find(Document(mapOf(
+            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
+        ))).first()
+        val product = products.find(Document(mapOf(
+            "_id" to inventory["_id"]
+        ))).first()
+        assertNotNull(inventory)
+        assertNotNull(product)
+
+        // Make a reservation first so we can modify it
+        AddProductToShoppingCart(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to 1, "product" to product
+        ))
+
+        // Get the generated documents
+        val preCartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val preInventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+
+        // Update the cart
+        UpdateReservationQuantityForAProduct(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to Int.MAX_VALUE, "product" to product
+        ))
+
+        // Get the generated documents
+        val cartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val inventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(cartR)
+        assertNotNull(inventoryR)
+
+        cartR.shouldContainValues(mapOf(
+            "_id" to userId,
+            "state" to "active",
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "products.0._id" to preCartR.g("products.0._id"),
+            "products.0.quantity" to preCartR.g("products.0.quantity"),
+            "products.0.name" to preCartR.g("products.0.name"),
+            "products.0.price" to preCartR.g("products.0.price")
+        ))
+
+        inventoryR.shouldContainValues(mapOf(
+            "_id" to preInventoryR.g("_id"),
+            "quantity" to preInventoryR.g("quantity"),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "reservations.0._id" to preInventoryR.g("reservations.0._id"),
+            "reservations.0.quantity" to preInventoryR.g("reservations.0.quantity"),
+            "reservations.0.createdOn" to preInventoryR.g("reservations.0.createdOn")
         ))
     }
 

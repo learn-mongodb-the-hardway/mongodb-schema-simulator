@@ -259,7 +259,7 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
                 val result = carts.updateOne(Document(mapOf(
                     "_id" to values["userId"],
                     "products._id" to document["_id"],
-                    "status" to "active"
+                    "state" to "active"
                 )), Document(mapOf(
                     "\$set" to mapOf(
                         "products.\$.quantity" to oldQuantity,
