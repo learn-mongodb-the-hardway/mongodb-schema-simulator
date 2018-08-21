@@ -5,7 +5,7 @@ import java.util.ArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-data class f(val value: Any? = Skip(), val klass: Any? = Skip(), val isNull: Boolean = false) {
+data class f(val value: Any? = Skip(), val klass: Any? = Skip(), val isNull: Boolean = false, val listSize: Int? = null) {
     class Skip
 }
 
@@ -25,6 +25,10 @@ fun Document.shouldContainValues(values: Map<String, Any>) {
                 if (fieldValue.klass != null
                     && fieldValue.klass::class != f.Skip::class) {
                     assertEquals(fieldValue.klass::class.qualifiedName, field::class.qualifiedName, "For field $path the expected type ${fieldValue.klass::class.qualifiedName} does not match encountered type ${field::class.qualifiedName}")
+                }
+
+                if (fieldValue.listSize != null && fieldValue.klass is ArrayList<*> && field is ArrayList<*>) {
+                    assertEquals(fieldValue.listSize, field.size)
                 }
 
                 // Check nullability of field

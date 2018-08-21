@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.test.assertNotNull
 
 class ReservationShoppingCartTest {
@@ -168,6 +169,56 @@ class ReservationShoppingCartTest {
             "reservations.0._id" to preInventoryR.g("reservations.0._id"),
             "reservations.0.quantity" to preInventoryR.g("reservations.0.quantity"),
             "reservations.0.createdOn" to preInventoryR.g("reservations.0.createdOn")
+        ))
+    }
+
+    @Test
+    fun expireCarts() {
+        val userId = 4
+        // Attempt to create a shopping cart
+        val inventory = inventories.find(Document(mapOf(
+            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
+        ))).first()
+        val product = products.find(Document(mapOf(
+            "_id" to inventory["_id"]
+        ))).first()
+        assertNotNull(inventory)
+        assertNotNull(product)
+
+        // Make a reservation first so we can modify it
+        AddProductToShoppingCart(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to 1, "product" to product
+        ))
+
+        // Force the expire by setting a cutOff date that is expired
+        val date = Date(Date().time - 20000000)
+        ExpireCarts(carts, inventories).execute(mapOf(
+            "cutOffDate" to date
+        ))
+
+        val cartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val inventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(cartR)
+        assertNotNull(inventoryR)
+
+        cartR.shouldContainValues(mapOf(
+            "_id" to userId,
+            "state" to "expired",
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "products" to f(f.Skip(), mutableListOf<Document>(), false, 1),
+            "products.0._id" to f(f.Skip(), ObjectId(), false),
+            "products.0.quantity" to f(1, Integer(0), false),
+            "products.0.name" to f(f.Skip(), String(), false),
+            "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
+        ))
+
+        inventoryR.shouldContainValues(mapOf(
+            "_id" to f(f.Skip(), ObjectId(), false),
+            "quantity" to inventory.g("quantity"),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "reservations" to f(f.Skip(), mutableListOf<Document>(), false, 0)
         ))
     }
 

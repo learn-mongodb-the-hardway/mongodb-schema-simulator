@@ -78,11 +78,11 @@ class ExpireCarts(private val carts: MongoCollection<Document>,
 
         carts.find(Document(mapOf(
             "modifiedOn" to mapOf(
-                "\$lte" to values["cutOffDate"],
-                "state" to "active"
-            )
+                "\$gt" to values["cutOffDate"]
+            ),
+            "state" to "active"
         ))).forEach { cart ->
-            val products = cart["products"] as Array<Document>
+            val products = cart["products"] as List<Document>
             products.forEach { product ->
 
                 // Return the quantity to the inventory from the cart
@@ -106,7 +106,7 @@ class ExpireCarts(private val carts: MongoCollection<Document>,
                     "_id" to cart["_id"]
                 )), Document(mapOf(
                     "\$set" to mapOf(
-                        "status" to "expired"
+                        "state" to "expired"
                     )
                 )))
             }
