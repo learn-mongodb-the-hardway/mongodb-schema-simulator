@@ -4,6 +4,7 @@ import com.github.javafaker.Faker
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.schemas.DataGenerator
+import com.mtools.schemasimulator.schemas.DateType
 import com.mtools.schemasimulator.schemas.DocumentTemplate
 import com.mtools.schemasimulator.schemas.DoubleGenerator
 import com.mtools.schemasimulator.schemas.DoubleType
@@ -37,6 +38,7 @@ class ShoppingCartDataGenerator(val db: MongoDatabase): DataGenerator {
             }).forEach {
                 inventories += DocumentGenerator(template {
                     field("_id", ObjectIdType)
+                    field("modifiedOn", DateType)
                     field("quantity", IntegerType.INT32, IntegerGenerator())
                 }).generate(mapOf("_id" to it["_id"]!!))
             }.generate()

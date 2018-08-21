@@ -5,10 +5,49 @@ import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import org.bson.Document
+import org.bson.types.ObjectId
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+
+data class f(val value: Any? = Skip(), val klass: Any? = Skip(), val isNull: Boolean = false) {
+    class Skip
+}
+
+fun Document.shouldContainValues(values: Map<String, f>) {
+    values.forEach { path, fieldValue ->
+        var field: Any = this
+
+        for(part in path.split(".")) {
+            field = when (field) {
+                is Document -> field[part]!!
+                is ArrayList<*> -> field[part.toInt()]
+                is Array<*> -> field[part.toInt()]!!
+                else -> field
+            }
+        }
+
+        // Deal with field value comparision
+        if (fieldValue.value != null
+            && fieldValue.value::class != f.Skip::class) {
+            assertEquals(fieldValue.value, field, "For field $path the expected value ${fieldValue.value} does not match the value $field")
+        }
+
+        // Deal with field type comparison
+        if (fieldValue.klass != null
+            && fieldValue.klass::class != f.Skip::class) {
+            assertEquals(fieldValue.klass::class.qualifiedName, field::class.qualifiedName, "For field $path the expected type ${fieldValue.klass::class.qualifiedName} does not match encountered type ${field::class.qualifiedName}")
+        }
+
+        // Check nullability of field
+        if (!fieldValue.isNull) {
+            assertNotNull(field, "field at path was null, expected not null")
+        }
+    }
+}
 
 class ReservationShoppingCartTest {
     @Test
@@ -16,8 +55,6 @@ class ReservationShoppingCartTest {
         // Attempt to create a shopping cart
         val action = AddProductToShoppingCart(carts, inventories)
         val product = products.find().first()
-
-        println()
 
         // Fire the action
         action.execute(mapOf(
@@ -30,21 +67,24 @@ class ReservationShoppingCartTest {
         val inventory = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
 
-        assertEquals(Document(), cart)
+        cart.shouldContainValues(mapOf<String, f>(
+            "_id" to f(1, Integer(0), false),
+            "state" to f("active", String(), false),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "products.0._id" to f(f.Skip(), ObjectId(), false),
+            "products.0.quantity" to f(1, Integer(0), false),
+            "products.0.name" to f(f.Skip(), String(), false),
+            "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
+        ))
 
-        println()
-
-//        val generator = ShoppingCartDataGenerator(ShoppingCartDataGeneratorTest.db)
-//        generator.generate(mapOf("numberOfDocuments" to 2))
-//
-//        assertEquals(2, db.getCollection("products").count())
-//        assertEquals(2, db.getCollection("inventories").count())
-//        val product = db.getCollection("products").find(Document()).first()
-//        assertNotNull(product)
-//        val inventory = db.getCollection("inventories").find(Document("_id", product["_id"])).first()
-//        assertNotNull(inventory)
-//        val shoppingCart = SuccessFullShoppingCart(db)
-
+        inventory.shouldContainValues(mapOf<String, f>(
+            "_id" to f(f.Skip(), ObjectId(), false),
+            "quantity" to f(f.Skip(), Integer(0), false),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "reservations.0._id" to f(f.Skip(), Integer(0), false),
+            "reservations.0.quantity" to f(1, Integer(0), false),
+            "reservations.0.createdOn" to f(f.Skip(), Date(), false)
+        ))
     }
 
     companion object {

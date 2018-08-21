@@ -385,6 +385,7 @@ class AddProductToShoppingCart(private val carts: MongoCollection<Document>,
                     "_id" to document["_id"],
                     "quantity" to mapOf("\$gte" to quantity)
                 )), Document(mapOf(
+                    "\$set" to mapOf("modifiedOn" to Date()),
                     "\$inc" to mapOf("quantity" to quantity.unaryMinus()),
                     "\$push" to mapOf(
                         "reservations" to mapOf(
