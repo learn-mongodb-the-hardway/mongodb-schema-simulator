@@ -52,23 +52,29 @@ fun Document.shouldContainValues(values: Map<String, f>) {
 class ReservationShoppingCartTest {
     @Test
     fun successfulAddProductToShoppingCartTest() {
+        val userId = 1
         // Attempt to create a shopping cart
         val action = AddProductToShoppingCart(carts, inventories)
-        val product = products.find().first()
+        val inventory = inventories.find(Document(mapOf(
+            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
+        ))).first()
+        val product = products.find(Document(mapOf(
+            "_id" to inventory["_id"]
+        ))).first()
 
         // Fire the action
         action.execute(mapOf(
-            "userId" to 1, "quantity" to 1, "product" to product
+            "userId" to userId, "quantity" to 1, "product" to product
         ))
 
         // Get the generated documents
-        val cart = carts
-            .find(Document(mapOf("_id" to 1))).first()
-        val inventory = inventories
+        val cartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
 
-        cart.shouldContainValues(mapOf<String, f>(
-            "_id" to f(1, Integer(0), false),
+        cartR.shouldContainValues(mapOf<String, f>(
+            "_id" to f(userId, Integer(0), false),
             "state" to f("active", String(), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products.0._id" to f(f.Skip(), ObjectId(), false),
@@ -77,12 +83,59 @@ class ReservationShoppingCartTest {
             "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
         ))
 
-        inventory.shouldContainValues(mapOf<String, f>(
+        inventoryR.shouldContainValues(mapOf<String, f>(
             "_id" to f(f.Skip(), ObjectId(), false),
-            "quantity" to f(f.Skip(), Integer(0), false),
+            "quantity" to f(inventory.getInteger("quantity") - 1, Integer(0), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to f(f.Skip(), Integer(0), false),
+            "reservations.0._id" to f(userId, Integer(0), false),
             "reservations.0.quantity" to f(1, Integer(0), false),
+            "reservations.0.createdOn" to f(f.Skip(), Date(), false)
+        ))
+    }
+
+    @Test
+    fun successfulUpdateReservationQuantityForAProductTest() {
+        val userId = 2
+        // Attempt to create a shopping cart
+        val inventory = inventories.find(Document(mapOf(
+            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 3)
+        ))).first()
+        val product = products.find(Document(mapOf(
+            "_id" to inventory["_id"]
+        ))).first()
+
+        // Make a reservation first so we can modify it
+        AddProductToShoppingCart(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to 1, "product" to product
+        ))
+
+        // Update the cart
+        UpdateReservationQuantityForAProduct(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to 2, "product" to product
+        ))
+
+        // Get the generated documents
+        val cartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val inventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+
+        cartR.shouldContainValues(mapOf<String, f>(
+            "_id" to f(userId, Integer(0), false),
+            "state" to f("active", String(), false),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "products.0._id" to f(f.Skip(), ObjectId(), false),
+            "products.0.quantity" to f(2, Integer(0), false),
+            "products.0.name" to f(f.Skip(), String(), false),
+            "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
+        ))
+
+        inventoryR.shouldContainValues(mapOf<String, f>(
+            "_id" to f(f.Skip(), ObjectId(), false),
+            "quantity" to f(inventory.getInteger("quantity") - 2, Integer(0), false),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "reservations.0._id" to f(userId, Integer(0), false),
+            "reservations.0.quantity" to f(2, Integer(0), false),
             "reservations.0.createdOn" to f(f.Skip(), Date(), false)
         ))
     }
@@ -110,7 +163,7 @@ class ReservationShoppingCartTest {
 
             // Generate some test data
             ShoppingCartDataGenerator(db).generate(mapOf(
-                "numberOfDocuments" to 1
+                "numberOfDocuments" to 5
             ))
         }
 

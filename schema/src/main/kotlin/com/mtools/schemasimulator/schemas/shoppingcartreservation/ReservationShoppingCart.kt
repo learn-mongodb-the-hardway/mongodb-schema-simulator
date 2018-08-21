@@ -162,7 +162,7 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
                 val cart = carts.find(Document(mapOf(
                     "_id" to values["userId"],
                     "products._id" to document["_id"],
-                    "status" to "active"
+                    "state" to "active"
                 ))).first()
 
                 // Throw id no cart found
@@ -170,7 +170,7 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
                     ?: throw SchemaSimulatorException("cart for user ${values["userId"]} not found in UpdateProductQuantityInCartDocument")
 
                 // Locate the product and get the old quantity
-                val products = cart.get("products") as Array<Document>
+                val products = cart.get("products") as List<Document>
                 products.forEach {
                     if (it.get("_id") == document["_id"]) {
                         oldQuantity = it.get("quantity") as Int
@@ -183,7 +183,7 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
                 val result = carts.updateOne(Document(mapOf(
                     "_id" to values["userId"],
                     "products._id" to document["_id"],
-                    "status" to "active"
+                    "state" to "active"
                 )), Document(mapOf(
                     "\$set" to mapOf(
                         "modifiedOn" to Date(),

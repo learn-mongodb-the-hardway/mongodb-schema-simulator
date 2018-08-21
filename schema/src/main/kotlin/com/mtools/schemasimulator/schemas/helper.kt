@@ -4,6 +4,7 @@ import com.github.javafaker.Faker
 import org.bson.types.Decimal128
 import org.bson.types.ObjectId
 import java.math.BigDecimal
+import java.util.*
 
 @DslMarker
 annotation class HelperMarker
@@ -94,12 +95,19 @@ class Decimal128TypeGenerator(val min: Double = Double.MIN_VALUE, val max: Doubl
     }
 }
 
+class DateTypeGenerator() : Generator {
+    override fun generate(): Any {
+        return Date()
+    }
+}
+
 class PrimitiveFieldHelper(val name: String, val type: Type, var generator: Generator?): Helper<PrimitiveField>() {
     override fun build(): PrimitiveField {
         if (generator == null) {
             generator = when (type) {
                 ObjectIdType -> ObjectIdGenerator()
                 DecimalType -> Decimal128TypeGenerator()
+                DateType -> DateTypeGenerator()
                 else -> FullNameGenerator()
             }
         }
