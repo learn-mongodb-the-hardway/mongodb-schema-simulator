@@ -1,26 +1,27 @@
-package com.mtools.schemasimulator.schemas.shoppingcart
+package com.mtools.schemasimulator.schemas.shoppingcartreservation
 
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoDatabase
+import org.bson.Document
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-class ShoppingCartTest {
+class ShoppingCartDataGeneratorTest {
     @Test
     fun simpleGenerationTest() {
-//        val generator = ShoppingCartDataGenerator(ShoppingCartDataGeneratorTest.db)
-//        generator.generate(mapOf("numberOfDocuments" to 2))
-//
-//        assertEquals(2, db.getCollection("products").count())
-//        assertEquals(2, db.getCollection("inventories").count())
-//        val product = db.getCollection("products").find(Document()).first()
-//        assertNotNull(product)
-//        val inventory = db.getCollection("inventories").find(Document("_id", product["_id"])).first()
-//        assertNotNull(inventory)
-        val shoppingCart = SuccessFullShoppingCart(db)
+        val generator = ShoppingCartDataGenerator(ShoppingCartDataGeneratorTest.db)
+        generator.generate(mapOf("numberOfDocuments" to 2))
 
+        assertEquals(2, db.getCollection("products").count())
+        assertEquals(2, db.getCollection("inventories").count())
+        val product = db.getCollection("products").find(Document()).first()
+        assertNotNull(product)
+        val inventory = db.getCollection("inventories").find(Document("_id", product["_id"])).first()
+        assertNotNull(inventory)
     }
 
     companion object {

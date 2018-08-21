@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator.schemas.shoppingcart
+package com.mtools.schemasimulator.schemas.shoppingcartreservation
 
 import com.github.javafaker.Faker
 import com.mongodb.client.MongoCollection
