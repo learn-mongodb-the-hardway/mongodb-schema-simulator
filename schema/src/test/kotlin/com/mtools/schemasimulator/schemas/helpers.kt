@@ -36,7 +36,9 @@ fun Document.shouldContainValues(values: Map<String, Any>) {
                     assertNotNull(field, "field at path was null, expected not null")
                 }
             }
-            else -> assertEquals(fieldValue, field)
+            else -> {
+                assertEquals(fieldValue, field, "For field $path the expected value $fieldValue does not match $field")
+            }
         }
     }
 }

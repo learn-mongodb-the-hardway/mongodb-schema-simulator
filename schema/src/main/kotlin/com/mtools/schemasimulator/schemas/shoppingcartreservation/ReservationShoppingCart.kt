@@ -3,6 +3,7 @@ package com.mtools.schemasimulator.schemas.shoppingcartreservation
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.UpdateOptions
 import org.bson.Document
+import org.bson.types.ObjectId
 import java.util.*
 
 //abstract class ShoppingCart(val db: MongoDatabase): Scenario {
@@ -34,8 +35,17 @@ class CheckoutCart(private val carts: MongoCollection<Document>,
 
         cart ?: throw SchemaSimulatorException("could not locate the cart for the user ${values["userId"]}")
 
+        // If no entries in the cart don't allow checkout
+        if (cart.contains("products") && cart["products"] is List<*> && (cart["products"] as List<*>).size == 0) {
+            throw SchemaSimulatorException("cart for user ${values["userId"]} does not contain any products and cannot be checkout out")
+        }
+
+        // Create an order Id
+        val orderId = ObjectId()
         // Insert an order document
         orders.insertOne(Document(mapOf(
+            "_id" to orderId,
+            "userId" to values["userId"],
             "createdOn" to Date(),
             "shipping" to mapOf(
                 "name" to values["name"],
@@ -46,16 +56,27 @@ class CheckoutCart(private val carts: MongoCollection<Document>,
         )))
 
         // Set the cart to complete
-        carts.updateOne(Document(mapOf(
+        var result = carts.updateOne(Document(mapOf(
             "_id" to cart["_id"]
         )), Document(mapOf(
             "\$set" to mapOf(
-                "status" to "complete"
+                "state" to "complete"
             )
         )))
 
+        // If no document was modified we failed to update the cart
+        // and need to rollback
+        if (result.modifiedCount == 0L) {
+            // Rollback the order
+            orders.deleteOne(Document(mapOf(
+                "_id" to orderId
+            )))
+
+            throw SchemaSimulatorException("could not update cart for user ${values["userId"]} to complete")
+        }
+
         // Pull the product reservation from all inventories
-        inventories.updateMany(Document(mapOf(
+        result = inventories.updateMany(Document(mapOf(
             "reservations._id" to values["userId"]
         )), Document(mapOf(
             "\$pull" to mapOf(
@@ -64,6 +85,24 @@ class CheckoutCart(private val carts: MongoCollection<Document>,
                 )
             )
         )))
+
+        // If no documents where modified, rollback
+        // changes to the cart and delete the orders entry
+        if (result.modifiedCount == 0L) {
+            // Reactivate the cart
+            var result = carts.updateOne(Document(mapOf(
+                "_id" to cart["_id"]
+            )), Document(mapOf(
+                "\$set" to mapOf(
+                    "state" to "active"
+                )
+            )))
+
+            // Rollback the order
+            orders.deleteOne(Document(mapOf(
+                "_id" to orderId
+            )))
+        }
 
         return mapOf()
     }

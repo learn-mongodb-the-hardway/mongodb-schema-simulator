@@ -138,6 +138,8 @@ class ReservationShoppingCartTest {
             .find(Document(mapOf("_id" to userId))).first()
         val preInventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(preCartR)
+        assertNotNull(preInventoryR)
 
         // Update the cart
         UpdateReservationQuantityForAProduct(carts, inventories).execute(mapOf(
@@ -222,12 +224,92 @@ class ReservationShoppingCartTest {
         ))
     }
 
+    @Test
+    fun checkoutCart() {
+        val userId = 5
+        // Attempt to create a shopping cart
+        val inventory = inventories.find(Document(mapOf(
+            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
+        ))).first()
+        val product = products.find(Document(mapOf(
+            "_id" to inventory["_id"]
+        ))).first()
+        assertNotNull(inventory)
+        assertNotNull(product)
+
+        // Make a reservation first so we can modify it
+        AddProductToShoppingCart(carts, inventories).execute(mapOf(
+            "userId" to userId, "quantity" to 1, "product" to product
+        ))
+
+        // Get the generated documents
+        val preCartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val preInventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+        assertNotNull(preCartR)
+        assertNotNull(preInventoryR)
+
+        // Checkout
+        CheckoutCart(carts, inventories, orders).execute(mapOf(
+            "userId" to userId,
+            "name" to "Peter",
+            "address" to "Peter street 1",
+            "payment" to mapOf(
+                "method" to "visa",
+                "transaction_id" to "1"
+            )
+        ))
+
+        val cartR = carts
+            .find(Document(mapOf("_id" to userId))).first()
+        val inventoryR = inventories
+            .find(Document(mapOf("_id" to product["_id"]))).first()
+        val orderR = orders
+            .find(Document(mapOf("userId" to userId))).first()
+        assertNotNull(cartR)
+        assertNotNull(inventoryR)
+        assertNotNull(orderR)
+
+        cartR.shouldContainValues(mapOf(
+            "_id" to userId,
+            "state" to "complete",
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "products.0._id" to preCartR.g("products.0._id"),
+            "products.0.quantity" to preCartR.g("products.0.quantity"),
+            "products.0.name" to preCartR.g("products.0.name"),
+            "products.0.price" to preCartR.g("products.0.price")
+        ))
+
+        inventoryR.shouldContainValues(mapOf(
+            "_id" to preInventoryR.g("_id"),
+            "quantity" to preInventoryR.g("quantity"),
+            "modifiedOn" to f(f.Skip(), Date(), false),
+            "reservations" to f(f.Skip(), mutableListOf<Document>(), false, 0)
+        ))
+
+        orderR.shouldContainValues(mapOf(
+            "_id" to f(f.Skip(), ObjectId(), false),
+            "userId" to userId,
+            "createdOn" to f(f.Skip(), Date(), false),
+            "shipping.name" to "Peter",
+            "shipping.address" to "Peter street 1",
+            "payment.method" to "visa",
+            "payment.transaction_id" to "1",
+            "products.0._id" to preCartR.g("products.0._id"),
+            "products.0.quantity" to preCartR.g("products.0.quantity"),
+            "products.0.name" to preCartR.g("products.0.name"),
+            "products.0.price" to preCartR.g("products.0.price")
+        ))
+    }
+
     companion object {
         lateinit var client: MongoClient
         lateinit var db: MongoDatabase
         lateinit var carts: MongoCollection<Document>
         lateinit var products: MongoCollection<Document>
         lateinit var inventories: MongoCollection<Document>
+        lateinit var orders: MongoCollection<Document>
 
         @BeforeAll
         @JvmStatic
@@ -237,11 +319,13 @@ class ReservationShoppingCartTest {
             carts = db.getCollection("carts")
             products = db.getCollection("products")
             inventories = db.getCollection("inventories")
+            orders = db.getCollection("orders")
 
             // Drop collection
             carts.drop()
             products.drop()
             inventories.drop()
+            orders.drop()
 
             // Generate some test data
             ShoppingCartDataGenerator(db).generate(mapOf(
