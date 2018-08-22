@@ -32,8 +32,8 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Fire the action
-        action.execute(mapOf(
-            "userId" to userId, "quantity" to 1, "product" to product
+        action.execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 1, product = product
         ))
 
         // Get the generated documents
@@ -78,13 +78,13 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to 1, "product" to product
+        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 1, product = product
         ))
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to 2, "product" to product
+        UpdateReservationQuantityForAProduct(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 2, product = product
         ))
 
         // Get the generated documents
@@ -129,8 +129,8 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to 1, "product" to product
+        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 1, product = product
         ))
 
         // Get the generated documents
@@ -142,8 +142,8 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to Int.MAX_VALUE, "product" to product
+        UpdateReservationQuantityForAProduct(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = Int.MAX_VALUE, product = product
         ))
 
         // Get the generated documents
@@ -188,14 +188,14 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to 1, "product" to product
+        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 1, product = product
         ))
 
         // Force the expire by setting a cutOff date that is expired
         val date = Date(Date().time - 20000000)
-        ExpireCarts(carts, inventories).execute(mapOf(
-            "cutOffDate" to date
+        ExpireCarts(carts, inventories).execute(ReservationShoppingCartValues(
+            cutOffDate = date
         ))
 
         val cartR = carts
@@ -238,8 +238,8 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(mapOf(
-            "userId" to userId, "quantity" to 1, "product" to product
+        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+            userId = userId, quantity = 1, product = product
         ))
 
         // Get the generated documents
@@ -251,14 +251,14 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Checkout
-        CheckoutCart(carts, inventories, orders).execute(mapOf(
-            "userId" to userId,
-            "name" to "Peter",
-            "address" to "Peter street 1",
-            "payment" to mapOf(
+        CheckoutCart(carts, inventories, orders).execute(ReservationShoppingCartValues(
+            userId = userId,
+            name = "Peter",
+            address = "Peter street 1",
+            payment = Document(mapOf(
                 "method" to "visa",
                 "transaction_id" to "1"
-            )
+            ))
         ))
 
         val cartR = carts
@@ -328,8 +328,8 @@ class ReservationShoppingCartTest {
             orders.drop()
 
             // Generate some test data
-            ShoppingCartDataGenerator(db).generate(mapOf(
-                "numberOfDocuments" to 5
+            ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
+                5, 100
             ))
         }
 

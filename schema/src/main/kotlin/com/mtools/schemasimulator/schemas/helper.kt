@@ -77,9 +77,9 @@ class DoubleGenerator(val maxNumberOfDecimals: Int = 2, val min: Int = 0, val ma
     }
 }
 
-class IntegerGenerator() : Generator {
+class IntegerGenerator(val min: Int = 0, val max: Int = Int.MAX_VALUE) : Generator {
     override fun generate() : Any {
-        return Faker().number().randomDigitNotZero()
+        return Faker().number().numberBetween(min, max)
     }
 }
 

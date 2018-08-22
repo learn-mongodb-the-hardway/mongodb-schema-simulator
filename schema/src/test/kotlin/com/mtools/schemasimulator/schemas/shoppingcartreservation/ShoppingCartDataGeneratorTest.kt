@@ -14,7 +14,9 @@ class ShoppingCartDataGeneratorTest {
     @Test
     fun simpleGenerationTest() {
         val generator = ShoppingCartDataGenerator(ShoppingCartDataGeneratorTest.db)
-        generator.generate(mapOf("numberOfDocuments" to 2))
+        generator.generate(ShoppingCartDataGeneratorOptions(
+            2, 100
+        ))
 
         assertEquals(2, db.getCollection("products").count())
         assertEquals(2, db.getCollection("inventories").count())

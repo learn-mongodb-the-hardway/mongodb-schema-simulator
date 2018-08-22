@@ -4,6 +4,7 @@ import com.github.javafaker.Faker
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.schemas.DataGenerator
+import com.mtools.schemasimulator.schemas.DataGeneratorOptions
 import com.mtools.schemasimulator.schemas.DateType
 import com.mtools.schemasimulator.schemas.DocumentTemplate
 import com.mtools.schemasimulator.schemas.DoubleGenerator
@@ -17,20 +18,26 @@ import com.mtools.schemasimulator.schemas.StringType
 import com.mtools.schemasimulator.schemas.template
 import org.bson.Document
 
+class ShoppingCartDataGeneratorOptions(
+    val numberOfDocuments: Int, val minimumInventoryQuantity: Int) : DataGeneratorOptions
+
 class ShoppingCartDataGenerator(val db: MongoDatabase): DataGenerator {
-    override fun generate(options: Map<String, Any>) {
+    override fun generate(options: DataGeneratorOptions) {
         val maxDocumentsInBatch = 1000
+
+        // Ensure we have the right type of options
+        if (!(options is ShoppingCartDataGeneratorOptions)) {
+            throw SchemaSimulatorException("options object must be of type ShoppingCartDataGeneratorOptions")
+        }
+
         // Collections
         val productCollection = db.getCollection("products")
         val inventoryCollection = db.getCollection("inventories")
         val products = mutableListOf<Document>()
         val inventories = mutableListOf<Document>()
 
-        // Extract the options
-        val numberOfDocuments = if (options["numberOfDocuments"] != null) options["numberOfDocuments"] as Int else 1000
-
         // Generate the numberOfExpected product documents
-        for (i in 0 until numberOfDocuments) {
+        for (i in 0 until options.numberOfDocuments) {
             products += DocumentGenerator(template {
                 field("_id", ObjectIdType)
                 field("name", StringType, ProductNameGenerator())
@@ -39,7 +46,7 @@ class ShoppingCartDataGenerator(val db: MongoDatabase): DataGenerator {
                 inventories += DocumentGenerator(template {
                     field("_id", ObjectIdType)
                     field("modifiedOn", DateType)
-                    field("quantity", IntegerType.INT32, IntegerGenerator())
+                    field("quantity", IntegerType.INT32, IntegerGenerator(min = options.minimumInventoryQuantity))
                 }).generate(mapOf("_id" to it["_id"]!!))
             }.generate()
 
