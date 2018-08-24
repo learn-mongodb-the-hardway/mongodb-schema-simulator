@@ -1,5 +1,7 @@
 package com.mtools.schemasimulator.schemas
 
+import com.mtools.schemasimulator.logger.LogEntry
+import com.mtools.schemasimulator.logger.MetricLogger
 import org.bson.Document
 import java.util.ArrayList
 import kotlin.test.assertEquals
@@ -56,4 +58,18 @@ fun Document.g(path: String) : Any {
     }
 
     return field
+}
+
+class TestMetricLogger(): MetricLogger {
+    val measures = mutableMapOf<String, MutableList<LogEntry>>()
+
+    override fun createLogEntry(simulation: String): LogEntry {
+        if (!measures.containsKey(simulation)) {
+            measures[simulation] = mutableListOf()
+        }
+
+        val entry = LogEntry(simulation)
+        measures[simulation]?.add(entry)
+        return entry
+    }
 }

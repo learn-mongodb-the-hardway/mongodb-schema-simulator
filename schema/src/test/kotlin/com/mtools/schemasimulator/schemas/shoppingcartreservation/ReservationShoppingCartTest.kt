@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.f
 import com.mtools.schemasimulator.schemas.g
 import com.mtools.schemasimulator.schemas.shouldContainValues
@@ -21,7 +22,7 @@ class ReservationShoppingCartTest {
     fun successfulAddProductToShoppingCartTest() {
         val userId = 1
         // Attempt to create a shopping cart
-        val action = AddProductToShoppingCart(carts, inventories)
+        val action = AddProductToShoppingCart(LogEntry(""), carts, inventories)
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
         ))).first()
@@ -78,12 +79,12 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(carts, inventories).execute(ReservationShoppingCartValues(
+        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = 2, product = product
         ))
 
@@ -129,7 +130,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
@@ -142,7 +143,7 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(carts, inventories).execute(ReservationShoppingCartValues(
+        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = Int.MAX_VALUE, product = product
         ))
 
@@ -188,13 +189,13 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
         // Force the expire by setting a cutOff date that is expired
         val date = Date(Date().time - 20000000)
-        ExpireCarts(carts, inventories).execute(ReservationShoppingCartValues(
+        ExpireCarts(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             cutOffDate = date
         ))
 
@@ -238,7 +239,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
@@ -251,7 +252,7 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Checkout
-        CheckoutCart(carts, inventories, orders).execute(ReservationShoppingCartValues(
+        CheckoutCart(LogEntry(""), carts, inventories, orders).execute(ReservationShoppingCartValues(
             userId = userId,
             name = "Peter",
             address = "Peter street 1",

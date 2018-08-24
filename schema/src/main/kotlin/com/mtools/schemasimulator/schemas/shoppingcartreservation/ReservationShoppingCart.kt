@@ -2,6 +2,8 @@ package com.mtools.schemasimulator.schemas.shoppingcartreservation
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.UpdateOptions
+import com.mtools.schemasimulator.logger.LogEntry
+import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.schemas.Action
 import com.mtools.schemasimulator.schemas.ActionValues
 import org.bson.Document
@@ -21,10 +23,10 @@ data class ReservationShoppingCartValues(
     val oldQuantity: Int = 0
 ): ActionValues
 
-class CheckoutCart(private val carts: MongoCollection<Document>,
+class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Document>,
                    private val inventories: MongoCollection<Document>,
-                   private val orders: MongoCollection<Document>) : Action {
-    override fun execute(values: ActionValues): Map<String, Any> {
+                   private val orders: MongoCollection<Document>) : Action(logEntry) {
+    override fun run(values: ActionValues): Map<String, Any> {
         if (!(values is ReservationShoppingCartValues)) {
             throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
         }
@@ -109,9 +111,10 @@ class CheckoutCart(private val carts: MongoCollection<Document>,
     }
 }
 
-class ExpireCarts(private val carts: MongoCollection<Document>,
-                  private val inventories: MongoCollection<Document>) : Action {
-    override fun execute(values: ActionValues): Map<String, Any> {
+class ExpireCarts(logEntry: LogEntry,
+                  private val carts: MongoCollection<Document>,
+                  private val inventories: MongoCollection<Document>) : Action(logEntry) {
+    override fun run(values: ActionValues): Map<String, Any> {
         if (!(values is ReservationShoppingCartValues)) {
             throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
         }
@@ -156,15 +159,16 @@ class ExpireCarts(private val carts: MongoCollection<Document>,
     }
 }
 
-class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Document>,
-                                           private val inventories: MongoCollection<Document>) : Action {
-    override fun execute(values: ActionValues): Map<String, Any> {
+class UpdateReservationQuantityForAProduct(logEntry: LogEntry,
+                                           private val carts: MongoCollection<Document>,
+                                           private val inventories: MongoCollection<Document>) : Action(logEntry) {
+    override fun run(values: ActionValues): Map<String, Any> {
         if (!(values is ReservationShoppingCartValues)) {
             throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
         }
 
         // Update product quantity in cart
-        val result1 = UpdateProductQuantityInCartDocument(carts).execute(values)
+        val result1 = UpdateProductQuantityInCartDocument(logEntry, carts).execute(values)
         val mergedOptions = ReservationShoppingCartValues(
             userId = values.userId, quantity = values.quantity, product = values.product,
             delta = result1["delta"] as Int, newQuantity = result1["newQuantity"] as Int, oldQuantity = result1["oldQuantity"] as Int
@@ -172,18 +176,19 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
 
         try {
             // Attempt to update inventory
-            UpdateInventoryQuantityInCartDocument(inventories).execute(mergedOptions)
+            UpdateInventoryQuantityInCartDocument(logEntry, inventories).execute(mergedOptions)
         } catch (exception: SchemaSimulatorException) {
             // Attempt to rollback
-            RolbackCartQuantity(carts).execute(mergedOptions)
+            RolbackCartQuantity(logEntry, carts).execute(mergedOptions)
         }
 
         return mapOf()
     }
 
     companion object {
-        class UpdateProductQuantityInCartDocument(private val carts: MongoCollection<Document>) : Action {
-            override fun execute(values: ActionValues): Map<String, Any> {
+        class UpdateProductQuantityInCartDocument(logEntry: LogEntry,
+                                                  private val carts: MongoCollection<Document>) : Action(logEntry) {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }
@@ -239,8 +244,9 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
             }
         }
 
-        class UpdateInventoryQuantityInCartDocument(private val inventories: MongoCollection<Document>) : Action {
-            override fun execute(values: ActionValues): Map<String, Any> {
+        class UpdateInventoryQuantityInCartDocument(logEntry: LogEntry,
+                                                    private val inventories: MongoCollection<Document>) : Action(logEntry) {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }
@@ -275,8 +281,9 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
             }
         }
 
-        class RolbackCartQuantity(private val carts: MongoCollection<Document>) : Action {
-            override fun execute(values: ActionValues): Map<String, Any> {
+        class RolbackCartQuantity(logEntry: LogEntry,
+                                  private val carts: MongoCollection<Document>) : Action(logEntry) {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }
@@ -307,32 +314,33 @@ class UpdateReservationQuantityForAProduct(private val carts: MongoCollection<Do
     }
 }
 
-class AddProductToShoppingCart(private val carts: MongoCollection<Document>,
-                               private val inventories: MongoCollection<Document>) : Action {
+class AddProductToShoppingCart(logEntry: LogEntry,
+                               private val carts: MongoCollection<Document>,
+                               private val inventories: MongoCollection<Document>) : Action(logEntry) {
 
-    override fun execute(values: ActionValues): Map<String, Any> {
+    override fun run(values: ActionValues): Map<String, Any> {
         if (!(values is ReservationShoppingCartValues)) {
             throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
         }
 
         // Attempt to Add product to shopping cart, nothing to do if it fails
-        AddProductToShoppingCartDocument(carts).execute(values)
+        AddProductToShoppingCartDocument(logEntry, carts).execute(values)
         // Attempt to update the inventory
         try {
-            ReserveProductToInventoryDocument(inventories).execute(values)
+            ReserveProductToInventoryDocument(logEntry, inventories).execute(values)
         } catch (exception: SchemaSimulatorException) {
             // We have to roll back the shopping cart
-            RollBackShoppingCartDocument(carts).execute(values)
+            RollBackShoppingCartDocument(logEntry, carts).execute(values)
         }
 
         return mapOf()
     }
 
     companion object {
-        class RollBackShoppingCartDocument(
-            private val carts: MongoCollection<Document>) : Action {
+        class RollBackShoppingCartDocument(logEntry: LogEntry,
+            private val carts: MongoCollection<Document>) : Action(logEntry) {
 
-            override fun execute(values: ActionValues): Map<String, Any> {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }
@@ -359,10 +367,10 @@ class AddProductToShoppingCart(private val carts: MongoCollection<Document>,
             }
         }
 
-        class AddProductToShoppingCartDocument(
-            private val carts: MongoCollection<Document>) : Action {
+        class AddProductToShoppingCartDocument(logEntry: LogEntry,
+            private val carts: MongoCollection<Document>) : Action(logEntry) {
 
-            override fun execute(values: ActionValues): Map<String, Any> {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }
@@ -394,10 +402,10 @@ class AddProductToShoppingCart(private val carts: MongoCollection<Document>,
             }
         }
 
-        class ReserveProductToInventoryDocument(
-            private val inventories: MongoCollection<Document>) : Action {
+        class ReserveProductToInventoryDocument(logEntry: LogEntry,
+            private val inventories: MongoCollection<Document>) : Action(logEntry) {
 
-            override fun execute(values: ActionValues): Map<String, Any> {
+            override fun run(values: ActionValues): Map<String, Any> {
                 if (!(values is ReservationShoppingCartValues)) {
                     throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
                 }

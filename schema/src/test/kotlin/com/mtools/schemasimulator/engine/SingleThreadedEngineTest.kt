@@ -4,6 +4,10 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.logger.LogEntry
+import com.mtools.schemasimulator.logger.MetricLogger
+import com.mtools.schemasimulator.logger.NoopLogger
+import com.mtools.schemasimulator.schemas.TestMetricLogger
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
@@ -13,17 +17,18 @@ import org.bson.Document
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import javax.script.ScriptEngineManager
 import kotlin.test.assertNotNull
 
 class SingleThreadedEngineTest {
 
     @Test
     fun initializeEngine() {
-        val engine = SingleThreadedEngine()
 
+        val logger = TestMetricLogger()
+        val engine = SingleThreadedEngine(logger)
         // Execute a simple simulation
         engine.execute(SimpleSimulation())
+        println()
 
 
 
@@ -67,7 +72,7 @@ class SingleThreadedEngineTest {
         override fun before() {
         }
 
-        override fun execute() {
+        override fun run(logEntry: LogEntry) {
             val product = products
                 .find()
                 .limit(-1)
@@ -76,14 +81,14 @@ class SingleThreadedEngineTest {
             assertNotNull(product)
 
             // Add product to shopping cart
-            AddProductToShoppingCart(carts, inventories).execute(ReservationShoppingCartValues(
+            AddProductToShoppingCart(logEntry, carts, inventories).execute(ReservationShoppingCartValues(
                 userId = userId,
                 quantity = Math.round(Math.random() * 5).toInt(),
                 product = product
             ))
 
             // Checkout
-            CheckoutCart(carts, inventories, orders).execute(ReservationShoppingCartValues(
+            CheckoutCart(logEntry, carts, inventories, orders).execute(ReservationShoppingCartValues(
                 userId = userId,
                 name = "Some random name",
                 address = "Aome random address",

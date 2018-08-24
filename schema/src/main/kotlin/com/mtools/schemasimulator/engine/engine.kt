@@ -1,6 +1,10 @@
 package com.mtools.schemasimulator.engine
 
 import com.mongodb.MongoClient
+import com.mtools.schemasimulator.logger.LogEntry
+import com.mtools.schemasimulator.logger.MetricLogger
+import com.mtools.schemasimulator.logger.NoopLogger
+import kotlin.system.measureNanoTime
 
 interface Engine {
     fun execute(simulation: Simulation)
@@ -13,18 +17,29 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
     abstract fun beforeAll()
     abstract fun before()
     abstract fun after()
-    abstract fun execute()
+
+    fun execute(logger: MetricLogger = NoopLogger()) {
+        val logEntry = logger.createLogEntry(this.javaClass.simpleName)
+
+        val time = measureNanoTime {
+            run(logEntry)
+        }
+
+        logEntry.total = time
+    }
+
+    abstract fun run(logEntry: LogEntry = LogEntry(""))
     abstract fun afterAll()
 }
 
-class SingleThreadedEngine: Engine {
+class SingleThreadedEngine(private val metricLogger: MetricLogger = NoopLogger()) : Engine {
     override fun execute(simulation: Simulation) {
         // We have to set execute the before All
         simulation.beforeAll()
 
         // Execute the simulation for the number of iterations indicated
         for (i in 0 until simulation.options.iterations) {
-            simulation.execute()
+            simulation.execute(metricLogger)
         }
 
         // Tear down everything
