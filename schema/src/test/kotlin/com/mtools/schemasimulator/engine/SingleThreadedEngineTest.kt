@@ -5,8 +5,6 @@ import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.logger.MetricLogger
-import com.mtools.schemasimulator.logger.NoopLogger
 import com.mtools.schemasimulator.schemas.TestMetricLogger
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
@@ -27,7 +25,10 @@ class SingleThreadedEngineTest {
         val logger = TestMetricLogger()
         val engine = SingleThreadedEngine(logger)
         // Execute a simple simulation
-        engine.execute(SimpleSimulation())
+        engine.execute(listOf(
+            SimpleSimulation()
+        ))
+
         println()
 
 

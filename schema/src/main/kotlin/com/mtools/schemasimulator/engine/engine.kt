@@ -7,7 +7,7 @@ import com.mtools.schemasimulator.logger.NoopLogger
 import kotlin.system.measureNanoTime
 
 interface Engine {
-    fun execute(simulation: Simulation)
+    fun execute(simulations: List<Simulation>)
 }
 
 data class SimulationOptions(val iterations: Int = 1000)
@@ -33,22 +33,34 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
 }
 
 class SingleThreadedEngine(private val metricLogger: MetricLogger = NoopLogger()) : Engine {
-    override fun execute(simulation: Simulation) {
+    override fun execute(simulations: List<Simulation>) {
         // We have to set execute the before All
-        simulation.beforeAll()
+        simulations.forEach { it.beforeAll() }
 
-        // Execute the simulation for the number of iterations indicated
-        for (i in 0 until simulation.options.iterations) {
-            simulation.execute(metricLogger)
+        // Execute the simulations in parallel
+        val threads = simulations.map {
+            Thread(Runnable {
+                for (i in 0 until it.options.iterations) {
+                    it.before()
+                    it.execute(metricLogger)
+                    it.after()
+                }
+            })
         }
 
+        // Start all the threads
+        threads.forEach { it.start() }
+
+        // Wait for threads to finish
+        threads.forEach { it.join() }
+
         // Tear down everything
-        simulation.afterAll()
+        simulations.forEach { it.afterAll() }
     }
 }
 
-class MultiThreadedEngine: Engine {
-    override fun execute(simulation: Simulation) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
+//class MultiThreadedEngine: Engine {
+//    override fun execute(simulation: Simulation) {
+//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//    }
+//}
