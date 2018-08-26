@@ -1,4 +1,10 @@
 package com.mtools.schemasimulator.load
 
-class Constant(val executions: Long) : LoadPattern {
+import com.mtools.schemasimulator.engine.Engine
+
+class Constant(val engine: Engine,
+               val executions: Long) : LoadPattern {
+    override fun execute(time: Long) {
+        engine.execute()
+    }
 }
