@@ -1,5 +1,7 @@
 package com.mtools.schemasimulator.load
 
+import com.mongodb.MongoClient
+import com.mongodb.MongoClientURI
 import kotlinx.coroutines.experimental.Job
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -111,7 +113,11 @@ abstract class BaseSlaveTicker(val pattern: LoadPattern): SlaveTicker {
     }
 }
 
-class LocalSlaveTicker(pattern: LoadPattern): BaseSlaveTicker(pattern)  {
+class LocalSlaveTicker(pattern: LoadPattern, uri: String): BaseSlaveTicker(pattern)  {
+    init {
+        pattern.init(MongoClient(MongoClientURI(uri)))
+    }
+
     override fun tick(time: Long) {
         pattern.execute(time).forEach {
             jobs.add(it)

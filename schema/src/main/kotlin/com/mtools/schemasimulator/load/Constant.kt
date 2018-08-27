@@ -1,6 +1,7 @@
 package com.mtools.schemasimulator.load
 
-import com.mtools.schemasimulator.engine.SimulationExecutor
+import com.mongodb.MongoClient
+import com.mtools.schemasimulator.executor.SimulationExecutor
 import kotlinx.coroutines.experimental.Job
 import mu.KLogging
 
@@ -10,6 +11,10 @@ class Constant(
     private val executeEveryMilliseconds: Long
 ) : LoadPattern {
     var currentTime = 0L
+
+    override fun init(client: MongoClient) {
+        executor.init(client)
+    }
 
     override fun start() {
         executor.start()

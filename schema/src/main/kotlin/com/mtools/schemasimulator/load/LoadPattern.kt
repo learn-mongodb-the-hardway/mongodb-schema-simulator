@@ -1,8 +1,10 @@
 package com.mtools.schemasimulator.load
 
+import com.mongodb.MongoClient
 import kotlinx.coroutines.experimental.Job
 
 interface LoadPattern {
+    fun init(client: MongoClient)
     fun start()
     fun execute(time: Long) : List<Job>
     fun stop()

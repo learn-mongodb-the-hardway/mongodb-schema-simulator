@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator
+package com.mtools.schemasimulator.cli
 
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
@@ -29,6 +29,8 @@ class SimpleSimulation(seedUserId: Int = 1,
     lateinit var carts: MongoCollection<Document>
     lateinit var inventories: MongoCollection<Document>
     lateinit var orders: MongoCollection<Document>
+
+
 
     override fun mongodbConnection(): MongoClient {
         return client

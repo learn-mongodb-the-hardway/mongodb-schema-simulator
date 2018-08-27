@@ -128,7 +128,7 @@ class PrimitiveFieldHelper(val name: String, val type: Type, var generator: Gene
     }
 }
 
-sealed class FieldCollectionHelper<T>() : Helper<T>() {
+sealed class FieldCollectionHelper<T> : Helper<T>() {
     val fields = mutableListOf<Field>()
 
     fun field(name: String, type: Type, generator: Generator? = null, init: PrimitiveFieldHelper.() -> Unit = {}) {

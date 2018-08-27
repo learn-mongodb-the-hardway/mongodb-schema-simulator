@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator.engine
+package com.mtools.schemasimulator.executor
 
 import com.mongodb.MongoClient
 import com.mtools.schemasimulator.logger.LogEntry
@@ -9,6 +9,7 @@ import kotlinx.coroutines.experimental.launch
 import kotlin.system.measureNanoTime
 
 interface SimulationExecutor {
+    fun init(client: MongoClient)
     fun start()
     fun execute() : Job
     fun stop()
@@ -21,6 +22,7 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
     abstract fun beforeAll()
     abstract fun before()
     abstract fun after()
+    abstract fun init(client: MongoClient)
 
     fun execute(logger: MetricLogger = NoopLogger()) {
         val logEntry = logger.createLogEntry(this.javaClass.simpleName)
@@ -39,6 +41,10 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
 class ThreadedSimulationExecutor(
     private val simulation: Simulation,
     private val metricLogger: MetricLogger = NoopLogger()) : SimulationExecutor {
+
+    override fun init(client: MongoClient) {
+        simulation.init(client)
+    }
 
     // Do any setup required for the full simulation
     override fun start() {

@@ -1,20 +1,10 @@
-package com.mtools.schemasimulator.engine
+package com.mtools.schemasimulator.executor
 
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
-import com.mongodb.client.MongoCollection
-import com.mongodb.client.MongoDatabase
-import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGenerator
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGeneratorOptions
-import org.bson.Document
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import kotlin.test.assertNotNull
 
 class SingleThreadedEngineTest {
 

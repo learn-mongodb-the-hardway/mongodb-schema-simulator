@@ -4,7 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mtools.schemasimulator.SimpleSimulation
 import com.mtools.schemasimulator.TestMetricLogger
-import com.mtools.schemasimulator.engine.ThreadedSimulationExecutor
+import com.mtools.schemasimulator.executor.ThreadedSimulationExecutor
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -23,11 +23,12 @@ class MasterTickerTest {
                 // 2 simulation executions every 100 ms
                 LocalSlaveTicker(Constant(
                     executor = ThreadedSimulationExecutor(
-                        SimpleSimulation(client, 1, 5), logger
+                        SimpleSimulation( 1, 5), logger
                     ),
                     numberOfCExecutions = 2,
                     executeEveryMilliseconds = 100
-                ))
+                ),
+                uri = "mongodb://localhost:27017")
             ),
             // Run for 300 ms (simulated time)
             // we should see 6 simulation executions
