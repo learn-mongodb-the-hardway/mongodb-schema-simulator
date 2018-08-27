@@ -71,13 +71,6 @@ subprojects {
         compile "org.mongodb:mongodb-driver:$mongodbDriverVersion"
         compile group: 'com.github.javafaker', name: 'javafaker', version: '0.15'
 
-//        // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-reflect
-//        compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: '1.2.61'
-//        // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-script-runtime
-//        compile group: 'org.jetbrains.kotlin', name: 'kotlin-script-runtime', version: '1.2.61'
-//        compile group: 'org.jetbrains.kotlin', name: 'kotlin-compiler-embeddable', version: '1.2.61'
-//        compile group: 'org.jetbrains.kotlin', name: 'kotlin-script-util', version: '1.2.61'
-
         compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
         compile "org.jetbrains.kotlin:kotlin-script-runtime:$kotlinVersion"
         compile "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion"

@@ -5,16 +5,15 @@ import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.schemas.f
-import com.mtools.schemasimulator.schemas.g
-import com.mtools.schemasimulator.schemas.shouldContainValues
+import com.mtools.schemasimulator.f
+import com.mtools.schemasimulator.g
+import com.mtools.schemasimulator.shouldContainValues
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.test.assertNotNull
 
 class ReservationShoppingCartTest {

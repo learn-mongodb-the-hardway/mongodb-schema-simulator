@@ -4,10 +4,14 @@ import com.mongodb.MongoClient
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.logger.NoopLogger
+import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.launch
 import kotlin.system.measureNanoTime
 
-interface Engine {
-    fun execute(simulations: List<Simulation>)
+interface SimulationExecutor {
+    fun start()
+    fun execute() : Job
+    fun stop()
 }
 
 data class SimulationOptions(val iterations: Int = 1000)
@@ -32,30 +36,26 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
     abstract fun afterAll()
 }
 
-class SingleThreadedEngine(private val metricLogger: MetricLogger = NoopLogger()) : Engine {
-    override fun execute(simulations: List<Simulation>) {
-        // We have to set execute the before All
-        simulations.forEach { it.beforeAll() }
+class ThreadedSimulationExecutor(
+    private val simulation: Simulation,
+    private val metricLogger: MetricLogger = NoopLogger()) : SimulationExecutor {
 
-        // Execute the simulations in parallel
-        val threads = simulations.map {
-            Thread(Runnable {
-                for (i in 0 until it.options.iterations) {
-                    it.before()
-                    it.execute(metricLogger)
-                    it.after()
-                }
-            })
+    // Do any setup required for the full simulation
+    override fun start() {
+        simulation.beforeAll()
+    }
+
+    // Do any teardown required for the full simulation
+    override fun stop() {
+        simulation.afterAll()
+    }
+
+    override fun execute() : Job {
+        return launch {
+            simulation.before()
+            simulation.execute(metricLogger)
+            simulation.after()
         }
-
-        // Start all the threads
-        threads.forEach { it.start() }
-
-        // Wait for threads to finish
-        threads.forEach { it.join() }
-
-        // Tear down everything
-        simulations.forEach { it.afterAll() }
     }
 }
 

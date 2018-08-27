@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator.schemas
+package com.mtools.schemasimulator
 
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.logger.MetricLogger

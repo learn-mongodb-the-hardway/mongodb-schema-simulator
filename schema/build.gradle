@@ -1,2 +1,15 @@
+ext {
+    kotlinxCoroutinesVersion = '0.25.0'
+}
+
 dependencies {
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion"
+}
+
+//implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.0'
+
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
 }

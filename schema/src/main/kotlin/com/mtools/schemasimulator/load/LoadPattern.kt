@@ -1,7 +1,11 @@
 package com.mtools.schemasimulator.load
 
+import kotlinx.coroutines.experimental.Job
+
 interface LoadPattern {
-    fun execute(time: Long)
+    fun start()
+    fun execute(time: Long) : List<Job>
+    fun stop()
 }
 
 /*
