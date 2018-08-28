@@ -113,9 +113,9 @@ abstract class BaseSlaveTicker(val pattern: LoadPattern): SlaveTicker {
     }
 }
 
-class LocalSlaveTicker(pattern: LoadPattern, uri: String): BaseSlaveTicker(pattern)  {
+class LocalSlaveTicker(mongoClient: MongoClient, pattern: LoadPattern): BaseSlaveTicker(pattern)  {
     init {
-        pattern.init(MongoClient(MongoClientURI(uri)))
+        pattern.init(mongoClient)
     }
 
     override fun tick(time: Long) {

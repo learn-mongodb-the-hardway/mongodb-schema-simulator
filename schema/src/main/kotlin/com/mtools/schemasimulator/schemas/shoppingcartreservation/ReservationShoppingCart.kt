@@ -93,7 +93,7 @@ class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Docume
         // changes to the cart and delete the orders entry
         if (result.modifiedCount == 0L) {
             // Reactivate the cart
-            var result = carts.updateOne(Document(mapOf(
+            carts.updateOne(Document(mapOf(
                 "_id" to cart["_id"]
             )), Document(mapOf(
                 "\$set" to mapOf(
@@ -346,7 +346,7 @@ class AddProductToShoppingCart(logEntry: LogEntry,
                 }
 
                 // Unwrap needed values
-                val document = values.product as Document
+                val document = values.product
 
                 // Execute cart update
                 val result = carts.updateOne(Document(mapOf(
@@ -376,7 +376,7 @@ class AddProductToShoppingCart(logEntry: LogEntry,
                 }
 
                 // Unwrap needed values
-                val document = values.product as Document
+                val document = values.product
 
                 // Execute cart update
                 val result = carts.updateOne(Document(mapOf(
@@ -411,8 +411,8 @@ class AddProductToShoppingCart(logEntry: LogEntry,
                 }
 
                 // Unwrap needed values
-                val document = values.product as Document
-                val quantity = values.quantity as Int
+                val document = values.product
+                val quantity = values.quantity
 
                 // Execute the inventory update
                 val result = inventories.updateOne(Document(mapOf(

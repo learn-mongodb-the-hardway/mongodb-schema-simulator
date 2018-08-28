@@ -37,6 +37,8 @@ class GeneralConfig(parser: ArgParser) {
                 throw SystemExitException("option 'file [$value] specified for --config does not exist'", 2)
             }
         }
+
+    val slave by parser.flagging("--slave", help = "Instance is a slave instance").default(false)
 }
 
 class ShowVersionException(version: String) : SystemExitException(version, 0)

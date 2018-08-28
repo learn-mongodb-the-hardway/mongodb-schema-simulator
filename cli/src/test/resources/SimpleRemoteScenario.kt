@@ -1,5 +1,3 @@
-package com.mtools.schemasimulator.cli
-
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
@@ -14,6 +12,7 @@ import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDa
 import org.bson.Document
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotNull
+import com.mtools.schemasimulator.cli.config.config
 
 class SimpleSimulation(seedUserId: Int = 1,
                        private val numberOfDocuments: Int = 5) : Simulation(SimulationOptions(iterations = 10)) {
@@ -90,5 +89,38 @@ class SimpleSimulation(seedUserId: Int = 1,
     }
 
     override fun afterAll() {
+    }
+}
+
+config {
+    mongodb {
+        url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+        db("integration_tests")
+    }
+
+    // Master level coordinator
+    coordinator {
+        // Each Master tick is every 1 millisecond
+        tickResolutionMiliseconds(1)
+        // Run for 1000 ticks or in this case 1000 simulated milliseconds
+        runForNumberOfTicks(1000)
+
+        // Local running slave thread
+        local {
+
+            // Constant Load Pattern
+            constant {
+                // Each tick produces two concurrently
+                // executed instances of the simulation
+                numberOfCExecutions(2)
+                // Execute every 100 milliseconds
+                executeEveryMilliseconds(100)
+            }
+
+            // Simulation
+            simulation(
+                SimpleSimulation(seedUserId = 1, numberOfDocuments = 10)
+            )
+        }
     }
 }

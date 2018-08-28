@@ -17,6 +17,9 @@ import com.xenomachina.argparser.ShowHelpException
 import com.xenomachina.argparser.SystemExitException
 import mu.KLogging
 import org.slf4j.Marker
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.Writer
 import java.util.*
@@ -49,8 +52,11 @@ object App : KLogging() {
         logger.info("version      : ${App.version}")
         logger.info("git revision : ${App.gitRev}")
 
+        // The input stream
+        val stream = BufferedInputStream(File(config.general.config!!).inputStream())
+
         // Start the application
-        Executor(config.general.config!!).execute()
+        Executor(InputStreamReader(stream), !config.general.slave).execute()
     }
 
     private fun execute(body: () -> Unit) {
@@ -67,7 +73,6 @@ object App : KLogging() {
             writer.write("To see all the options, execute: $name --help")
             writer.flush()
         } finally {
-//            jdbcCache.close()
         }
     }
 

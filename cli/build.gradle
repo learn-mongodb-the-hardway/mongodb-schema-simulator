@@ -2,6 +2,8 @@ import org.apache.tools.ant.filters.ReplaceTokens
 
 ext {
     kotlinArgparserVersion = '2.0.3'
+    rpcServerVersion = '0.9'
+    rpcClientVersion = '0.9'
 }
 
 apply plugin: 'application'
@@ -18,6 +20,8 @@ dependencies {
 
     compile "com.xenomachina:kotlin-argparser:$kotlinArgparserVersion"
     compile "ch.qos.logback:logback-classic:$logbackVersion"
+    compile "com.github.arteam:simple-json-rpc-server:$rpcServerVersion"
+    compile "com.github.arteam:simple-json-rpc-client:$rpcClientVersion"
 
     runtime fileTree(dir: 'libs', include: ['*.jar'])
 }

@@ -14,21 +14,19 @@ class MasterTickerTest {
     @Test
     fun simpleMasterTickerTest() {
         val logger = TestMetricLogger()
-
+        val client = MongoClient(MongoClientURI("mongodb://localhost:27017"))
         // Create a Master ticker to execute
         val ticker = MasterTicker(
             slaveTickers = listOf(
-
                 // Local Slave Ticker runs at a constant
                 // 2 simulation executions every 100 ms
-                LocalSlaveTicker(Constant(
+                LocalSlaveTicker(client, Constant(
                     executor = ThreadedSimulationExecutor(
                         SimpleSimulation( 1, 5), logger
                     ),
                     numberOfCExecutions = 2,
                     executeEveryMilliseconds = 100
-                ),
-                uri = "mongodb://localhost:27017")
+                ))
             ),
             // Run for 300 ms (simulated time)
             // we should see 6 simulation executions

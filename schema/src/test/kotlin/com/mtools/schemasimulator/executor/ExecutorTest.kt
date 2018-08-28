@@ -6,10 +6,12 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class SingleThreadedEngineTest {
+class ExecutorTest {
 
     @Test
     fun initializeEngine() {
+
+//        val executor = Executor()
 
 //        val logger = TestMetricLogger()
 //        val engine = ThreadedSimulationExecutor(logger)
