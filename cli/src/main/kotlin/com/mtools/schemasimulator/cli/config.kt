@@ -39,6 +39,57 @@ class GeneralConfig(parser: ArgParser) {
         }
 
     val slave by parser.flagging("--slave", help = "Instance is a slave instance").default(false)
+
+    val master by parser.flagging("--master", help = "Instance is a master instance").default(false)
+
+    val masterURI = parser.storing("--master-uri", help = "Connection: master <host:port> connection, example [--master-uri localhost:15440]")
+        .default(null)
+        .addValidator {
+            // Value must be set
+            if (value == null && slave) {
+                throw SystemExitException("option '--master-uri must be specified if slave is set'", 2)
+            }
+
+            // Validate the connection uri passed in
+            if (slave) {
+                val parts = value!!.split(":")
+                if (parts.size < 2) {
+                    throw SystemExitException("option 'master-uri must be of the format <host:port>'", 2)
+                }
+
+                // Check if we can parse the port
+                try {
+                    parts[1].toInt()
+                } catch(ex: Exception) {
+                    throw SystemExitException("option 'master-uri port provided is not a number'", 2)
+                }
+            }
+        }
+
+    val host by parser.storing("-h", "--host", help = "General: The host we are binding too")
+        .default(null)
+        .addValidator {
+            if (value == null && (master || slave)) {
+                throw SystemExitException("option --port must be specified", 2)
+            }
+        }
+
+    val port by parser.storing("-p", "--port", help = "General: The host we are binding too")
+        .default(null)
+        .addValidator {
+            if (value == null && (master || slave)) {
+                throw SystemExitException("option --port must be specified", 2)
+            }
+
+            // Check if we can parse the port
+            if ((master || slave)) {
+                try {
+                    value!!.toInt()
+                } catch (ex: Exception) {
+                    throw SystemExitException("option '--port provided is not a number'", 2)
+                }
+            }
+        }
 }
 
 class ShowVersionException(version: String) : SystemExitException(version, 0)

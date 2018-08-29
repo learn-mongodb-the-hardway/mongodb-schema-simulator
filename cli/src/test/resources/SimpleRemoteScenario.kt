@@ -101,12 +101,13 @@ config {
     // Master level coordinator
     coordinator {
         // Each Master tick is every 1 millisecond
-        tickResolutionMiliseconds(1)
+        tickResolutionMilliseconds(1)
         // Run for 1000 ticks or in this case 1000 simulated milliseconds
         runForNumberOfTicks(1000)
 
         // Local running slave thread
-        local {
+        remote {
+            name("local1")
 
             // Constant Load Pattern
             constant {

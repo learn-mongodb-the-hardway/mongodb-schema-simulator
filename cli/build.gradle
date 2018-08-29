@@ -12,16 +12,18 @@ applicationDefaultJvmArgs = ["-Xmx16g"]
 mainClassName = "com.mtools.schemasimulator.cli.MainKt"
 
 repositories {
+    mavenCentral()
     maven { url "https://dl.bintray.com/xenomachina/maven" }
 }
 
 dependencies {
     compile project(':schema')
 
+    implementation 'com.beust:klaxon:3.0.1'
+
     compile "com.xenomachina:kotlin-argparser:$kotlinArgparserVersion"
     compile "ch.qos.logback:logback-classic:$logbackVersion"
-    compile "com.github.arteam:simple-json-rpc-server:$rpcServerVersion"
-    compile "com.github.arteam:simple-json-rpc-client:$rpcClientVersion"
+    compile "org.java-websocket:Java-WebSocket:$websocketVersion"
 
     runtime fileTree(dir: 'libs', include: ['*.jar'])
 }

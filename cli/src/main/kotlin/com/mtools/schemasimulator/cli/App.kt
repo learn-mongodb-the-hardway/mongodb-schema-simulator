@@ -47,16 +47,32 @@ object App : KLogging() {
             loadConfig(arrayOf("--help"))
         }
 
-        val config = loadConfig(args)
-
         logger.info("version      : ${App.version}")
         logger.info("git revision : ${App.gitRev}")
+
+        // Parse the options
+        val config = loadConfig(args)
+        // Attempt to validate the options
+        config.validate()
 
         // The input stream
         val stream = BufferedInputStream(File(config.general.config!!).inputStream())
 
-        // Start the application
-        Executor(InputStreamReader(stream), !config.general.slave).execute()
+        if (config.general.slave) {
+            SlaveExecutor(SlaveExecutorConfig(
+                config.general.masterURI.value!!.split(":")[0],
+                config.general.masterURI.value!!.split(":")[1].toInt(),
+                config.general.host!!,
+                config.general.port!!.toInt()
+            ))
+        } else {
+            MasterExecutor(MasterExecutorConfig(
+                config.general.master,
+                InputStreamReader(stream).readText(),
+                config.general.host,
+                config.general.port?.toInt()
+            ))
+        }
     }
 
     private fun execute(body: () -> Unit) {
@@ -70,7 +86,7 @@ object App : KLogging() {
             val writer = OutputStreamWriter(System.err)
             e.printUserMessage(writer, name, 80)
             writer.writeln()
-            writer.write("To see all the options, execute: $name --help")
+            writer.write("To see all the options, start: $name --help")
             writer.flush()
         } finally {
         }

@@ -1,6 +1,8 @@
 package com.mtools.schemasimulator.cli.config
 
 import com.mtools.schemasimulator.executor.Simulation
+import java.util.*
+import java.util.concurrent.LinkedBlockingDeque
 
 @DslMarker
 annotation class HelperMarker
@@ -39,15 +41,15 @@ class ConfigHelper : Helper<Config>() {
 
 class CoordinatorHelper: Helper<CoordinatorConfig>() {
     private val tickers: MutableList<SlaveTickerConfig> = mutableListOf()
-    private var tickResolutionMiliseconds: Long = 1L
+    private var tickResolutionMilliseconds: Long = 1L
     private var runForNumberOfTicks: Long = 1000L
 
     override fun build(): CoordinatorConfig {
-        return CoordinatorConfig(tickers, tickResolutionMiliseconds, runForNumberOfTicks)
+        return CoordinatorConfig(LinkedBlockingDeque(tickers), tickResolutionMilliseconds, runForNumberOfTicks)
     }
 
-    fun tickResolutionMiliseconds(value: Long) {
-        tickResolutionMiliseconds = value
+    fun tickResolutionMilliseconds(value: Long) {
+        tickResolutionMilliseconds = value
     }
 
     fun runForNumberOfTicks(value: Long) {
@@ -59,14 +61,49 @@ class CoordinatorHelper: Helper<CoordinatorConfig>() {
         b.init()
         tickers += b.build()
     }
+
+    fun remote(init: RemoteHelper.() -> Unit) {
+        val b = RemoteHelper()
+        b.init()
+        tickers += b.build()
+    }
+}
+
+class RemoteHelper: Helper<SlaveTickerConfig>() {
+    private lateinit var loadPatternConfig: LoadPatternConfig
+    private lateinit var simulation: Simulation
+    private var name: String = "remote_${Date().time}"
+
+    override fun build(): SlaveTickerConfig {
+        return RemoteConfig(name, loadPatternConfig, simulation)
+    }
+
+    fun name(value: String) {
+        name = value
+    }
+
+    fun constant(init: ConstantHelper.() -> Unit) {
+        val b = ConstantHelper()
+        b.init()
+        loadPatternConfig = b.build()
+    }
+
+    fun simulation(simulation: Simulation) {
+        this.simulation = simulation
+    }
 }
 
 class LocalHelper: Helper<SlaveTickerConfig>() {
     private lateinit var loadPatternConfig: LoadPatternConfig
     private lateinit var simulation: Simulation
+    private var name: String = "local_${Date().time}"
 
     override fun build(): SlaveTickerConfig {
-        return LocalConfig(loadPatternConfig, simulation)
+        return LocalConfig(name, loadPatternConfig, simulation)
+    }
+
+    fun name(value: String) {
+        name = value
     }
 
     fun constant(init: ConstantHelper.() -> Unit) {
@@ -112,18 +149,18 @@ class MongoHelper: Helper<MongoConfig>() {
 
 interface LoadPatternConfig
 
-class ConstantConfig(val numberOfCExecutions: Long,
+data class ConstantConfig(val numberOfCExecutions: Long,
      val executeEveryMilliseconds: Long
 ) : LoadPatternConfig
 
 interface SlaveTickerConfig
 
-class LocalConfig(val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
+data class LocalConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
 
-class RemoteConfig(val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
+data class RemoteConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
 
-class CoordinatorConfig(val tickers: MutableList<SlaveTickerConfig>, val tickResolutionMiliseconds: Long, val runForNumberOfTicks: Long)
+data class CoordinatorConfig(val tickers: LinkedBlockingDeque<SlaveTickerConfig>, val tickResolutionMiliseconds: Long, val runForNumberOfTicks: Long)
 
-class Config(val mongo: MongoConfig, val coordinator: CoordinatorConfig)
+data class Config(val mongo: MongoConfig, val coordinator: CoordinatorConfig)
 
-class MongoConfig(val url: String, val dbname: String)
+data class MongoConfig(val url: String, val dbname: String)
