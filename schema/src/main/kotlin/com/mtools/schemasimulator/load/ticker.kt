@@ -2,7 +2,9 @@ package com.mtools.schemasimulator.load
 
 import com.mongodb.MongoClient
 import com.mtools.schemasimulator.clients.WebSocketConnectionClient
+import com.mtools.schemasimulator.messages.master.Tick
 import kotlinx.coroutines.experimental.Job
+import mu.KLogging
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -128,6 +130,8 @@ class LocalSlaveTicker(val name: String, mongoClient: MongoClient, pattern: Load
             jobs.add(it)
         }
     }
+
+    companion object : KLogging()
 }
 
 class RemoteSlaveTicker (
@@ -142,12 +146,16 @@ class RemoteSlaveTicker (
     }
 
     override fun start() {
+        logger.info("Slave ticker start")
     }
 
     override fun stop() {
+        logger.info("Slave ticker stop")
     }
 
     override fun tick(time: Long) {
+        logger.info("master tick $time")
+        client.send(Tick(time))
     }
 
     fun initialized(): Boolean {
@@ -159,4 +167,6 @@ class RemoteSlaveTicker (
         initialized = true
         ready = true
     }
+
+    companion object : KLogging()
 }

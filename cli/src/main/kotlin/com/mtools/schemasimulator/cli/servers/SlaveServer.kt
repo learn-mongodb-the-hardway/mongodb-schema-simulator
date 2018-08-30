@@ -4,6 +4,7 @@ import com.beust.klaxon.Klaxon
 import com.mtools.schemasimulator.cli.SlaveExecutorConfig
 import com.mtools.schemasimulator.messages.master.Configure
 import com.mtools.schemasimulator.messages.master.ConfigureResponse
+import com.mtools.schemasimulator.messages.master.Tick
 import mu.KLogging
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
@@ -14,6 +15,8 @@ import javax.script.ScriptEngineManager
 
 class SlaveServer(val config: SlaveExecutorConfig): WebSocketServer(InetSocketAddress(config.uri.host, config.uri.port)) {
     private val configureMessage = """method"\s*:\s*"configure"""".toRegex()
+    private val tickMessage = """method"\s*:\s*"tick"""".toRegex()
+
     // Attempt to read the configuration Kotlin file
     val engine = ScriptEngineManager().getEngineByExtension("kts")!!
 
@@ -38,6 +41,11 @@ class SlaveServer(val config: SlaveExecutorConfig): WebSocketServer(InetSocketAd
 
                 // Send a response
                 conn.send(Klaxon().toJsonString(ConfigureResponse(configure.id)))
+            }
+        } else if (message != null && message.contains(tickMessage) && conn != null) {
+            val tick = Klaxon().parse<Tick>(message)
+            if (tick != null) {
+                logger.info { "received tick message: ${tick.time}" }
             }
         }
     }
