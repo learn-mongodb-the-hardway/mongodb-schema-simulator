@@ -3,6 +3,7 @@ package com.mtools.schemasimulator.cli
 import kotlinx.coroutines.experimental.launch
 import org.junit.jupiter.api.Test
 import java.io.InputStreamReader
+import java.net.URI
 
 class ExecutorTest {
 
@@ -19,19 +20,19 @@ class ExecutorTest {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(
             true,
-            InputStreamReader(ClassLoader.getSystemResourceAsStream("SimpleRemoteScenario.kt")).readText(),
-            "127.0.0.1", 14500
+            URI.create("http://127.0.0.1:14500"),
+            InputStreamReader(ClassLoader.getSystemResourceAsStream("SimpleRemoteScenario.kt")).readText()
         ))
 
         // Setup two slave Executors
         val slaveExecutor1 = SlaveExecutor(SlaveExecutorConfig(
-            "127.0.0.1", 14500,
-            "127.0.0.1", 14501
+            URI.create("http://127.0.0.1:14500"),
+            URI.create("http://127.0.0.1:14501")
         ))
 
         val slaveExecutor2 = SlaveExecutor(SlaveExecutorConfig(
-            "127.0.0.1", 14500,
-            "127.0.0.1", 14502
+            URI.create("http://127.0.0.1:14500"),
+            URI.create("http://127.0.0.1:14502")
         ))
 
 //        // Start master
@@ -45,11 +46,11 @@ class ExecutorTest {
 //        }
 
         Thread(Runnable {
-            slaveExecutor1.start()
+            masterExecutor.start()
         }).start()
 
         Thread(Runnable {
-            masterExecutor.start()
+            slaveExecutor1.start()
         }).start()
 
 //        slaveExecutor2.start()

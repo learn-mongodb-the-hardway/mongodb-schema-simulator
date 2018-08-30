@@ -22,6 +22,7 @@ import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.Writer
+import java.net.URI
 import java.util.*
 
 object App : KLogging() {
@@ -60,17 +61,14 @@ object App : KLogging() {
 
         if (config.general.slave) {
             SlaveExecutor(SlaveExecutorConfig(
-                config.general.masterURI.value!!.split(":")[0],
-                config.general.masterURI.value!!.split(":")[1].toInt(),
-                config.general.host!!,
-                config.general.port!!.toInt()
+                URI("http://${config.general.masterURI}"),
+                URI("http://${config.general.host}:${config.general.port}")
             ))
         } else {
             MasterExecutor(MasterExecutorConfig(
                 config.general.master,
-                InputStreamReader(stream).readText(),
-                config.general.host,
-                config.general.port?.toInt()
+                URI("http://${config.general.host}:${config.general.port}"),
+                InputStreamReader(stream).readText()
             ))
         }
     }

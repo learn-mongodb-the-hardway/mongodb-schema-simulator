@@ -20,7 +20,7 @@ class MasterTickerTest {
             slaveTickers = listOf(
                 // Local Slave Ticker runs at a constant
                 // 2 simulation executions every 100 ms
-                LocalSlaveTicker(client, Constant(
+                LocalSlaveTicker("name", client, Constant(
                     executor = ThreadedSimulationExecutor(
                         SimpleSimulation( 1, 5), logger
                     ),
