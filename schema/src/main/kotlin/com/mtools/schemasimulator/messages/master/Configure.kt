@@ -2,6 +2,7 @@ package com.mtools.schemasimulator.messages.master
 
 import com.beust.klaxon.Json
 import com.mtools.schemasimulator.messages.MethodCall
+import com.mtools.schemasimulator.messages.MethodErrorResponse
 import com.mtools.schemasimulator.messages.MethodResponse
 import java.util.*
 
@@ -14,3 +15,5 @@ data class Configure(val name: String, val config: String) : MethodCall("configu
 }
 
 class ConfigureResponse(id: Long) : MethodResponse("configure", id)
+
+class ConfigureErrorResponse(id: Long, message: String, errorCode: Int) : MethodErrorResponse("configure", id, message, errorCode)
