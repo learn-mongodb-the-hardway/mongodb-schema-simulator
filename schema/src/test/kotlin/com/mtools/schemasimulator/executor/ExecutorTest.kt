@@ -16,7 +16,7 @@ class ExecutorTest {
 //        val logger = TestMetricLogger()
 //        val engine = ThreadedSimulationExecutor(logger)
 //        // Execute a simple simulation
-//        engine.execute(listOf(
+//        engine.tick(listOf(
 //            SimpleSimulation()
 //        ))
 //

@@ -35,54 +35,39 @@ class ExecutorTest {
             URI.create("http://127.0.0.1:14502")
         ))
 
-//        // Start master
-//        val masterJob = launch {
-//            masterExecutor.start()
-//        }
-//
-//        // Start slaves
-//        val slave1Job = launch {
-//            slaveExecutor1.start()
-//        }
-
-        Thread(Runnable {
+        val masterThread = Thread(Runnable {
+            println("  +++++++++++++++++++++++ START MASTER")
             masterExecutor.start()
-        }).start()
+            println("  +++++++++++++++++++++++ STOP MASTER")
+        })
 
-        Thread(Runnable {
+        val slaveThread1 = Thread(Runnable {
+            println("  +++++++++++++++++++++++ START SLAVE1")
             slaveExecutor1.start()
-        }).start()
+            println("  +++++++++++++++++++++++ STOP SLAVE1")
+        })
 
-//        slaveExecutor2.start()
-            while(true) {
-                Thread.sleep(1000)
-            }
+        val slaveThread2 = Thread(Runnable {
+            println("  +++++++++++++++++++++++ START SLAVE2")
+            slaveExecutor2.start()
+            println("  +++++++++++++++++++++++ STOP SLAVE2")
+        })
 
-//        val stream = ClassLoader.getSystemResourceAsStream("SimpleRemoteScenario.kt")
-//        val executor = MasterExecutor(InputStreamReader(stream))
-//        executor.start()
-//        println()
-//        }
+        println("+++++++++++++++++++++++ START MASTER")
+        // Start the threads
+        masterThread.start()
+        println("+++++++++++++++++++++++ START SLAVE1")
+        slaveThread1.start()
+        println("+++++++++++++++++++++++ START SLAVE2")
+        slaveThread2.start()
+
+        // Wait for them to be done
+        println("+++++++++++++++++++++++ WAIT FOR MASTER")
+        masterThread.join()
+        println("+++++++++++++++++++++++ WAIT FOR SLAVE1")
+        slaveThread1.join()
+        println("+++++++++++++++++++++++ WAIT FOR SLAVE2")
+        slaveThread2.join()
+        println("+++++++++++++++++++++++ ALL DONE")
     }
-
-//    val simpleConfig = config {
-//        mongodb {
-//            url("mongoodb://locahost:27017")
-//            db("integration_tests")
-//        }
-//
-//        // Master level coordinator
-//        coordinator {
-//            // Local running slave thread
-//            local {
-//                // Load Pattern
-//                constant {}
-//
-//                // Simulation
-//                simulation(
-//                    SimpleSimulation(seedUserId = 1, numberOfDocuments = 10)
-//                )
-//            }
-//        }
-//    }
 }

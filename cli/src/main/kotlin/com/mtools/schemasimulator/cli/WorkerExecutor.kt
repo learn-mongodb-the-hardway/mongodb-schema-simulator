@@ -2,7 +2,8 @@ package com.mtools.schemasimulator.cli
 
 import com.mtools.schemasimulator.clients.WebSocketConnectionClient
 import com.mtools.schemasimulator.cli.servers.SlaveServer
-import com.mtools.schemasimulator.messages.slave.Register
+import com.mtools.schemasimulator.messages.worker.Register
+import kotlinx.coroutines.experimental.launch
 import mu.KLogging
 import java.net.URI
 
@@ -16,10 +17,6 @@ class SlaveExecutor(private val config: SlaveExecutorConfig) : Executor {
     lateinit var client: WebSocketConnectionClient
 
     fun start() {
-        // We are going to set up our services on the provided host and port
-        val server = SlaveServer(config)
-        server.start()
-
         // On open function
         val onOpen = fun(client: WebSocketConnectionClient) {
             logger.info { "Slave received onOpen event" }
@@ -31,10 +28,23 @@ class SlaveExecutor(private val config: SlaveExecutorConfig) : Executor {
             config.masterURI,
             config.maxReconnectAttempts,
             config.waitMSBetweenReconnectAttempts,
-            onOpen) { client, message ->
+            onOpen) { _, message ->
             logger.info("Slave received message: [$message]")
         }
 
+        // Shutdown handler
+        val onShutdown = fun(s: SlaveServer) {
+            launch {
+                s.stop()
+                client.disconnect()
+            }
+        }
+
+        // We are going to set up our services on the provided host and port
+        val server = SlaveServer(config, onShutdown)
+        // Start the server`
+        server.start()
+        // Start the websocket client connection
         client.connect()
     }
 

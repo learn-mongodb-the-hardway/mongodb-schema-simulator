@@ -103,7 +103,7 @@ config {
         // Each Master tick is every 1 millisecond
         tickResolutionMilliseconds(1)
         // Run for 1000 ticks or in this case 1000 simulated milliseconds
-        runForNumberOfTicks(1000)
+        runForNumberOfTicks(11)
 
         // Local running slave thread
         remote {
@@ -115,12 +115,31 @@ config {
                 // executed instances of the simulation
                 numberOfCExecutions(2)
                 // Execute every 100 milliseconds
-                executeEveryMilliseconds(100)
+                executeEveryMilliseconds(2)
             }
 
             // Simulation
             simulation(
                 SimpleSimulation(seedUserId = 1, numberOfDocuments = 10)
+            )
+        }
+
+        // Local running slave thread
+        remote {
+            name("local2")
+
+            // Constant Load Pattern
+            constant {
+                // Each tick produces two concurrently
+                // executed instances of the simulation
+                numberOfCExecutions(2)
+                // Execute every 100 milliseconds
+                executeEveryMilliseconds(2)
+            }
+
+            // Simulation
+            simulation(
+                SimpleSimulation(seedUserId = 10000, numberOfDocuments = 10)
             )
         }
     }

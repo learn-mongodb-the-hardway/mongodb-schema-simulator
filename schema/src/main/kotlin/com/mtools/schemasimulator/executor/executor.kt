@@ -66,7 +66,7 @@ class ThreadedSimulationExecutor(
 }
 
 //class MultiThreadedEngine: Engine {
-//    override fun execute(simulation: Simulation) {
+//    override fun tick(simulation: Simulation) {
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
 //}

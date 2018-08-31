@@ -24,7 +24,7 @@ class Constant(
         executor.stop()
     }
 
-    override fun execute(time: Long) : List<Job> {
+    override fun tick(time: Long) : List<Job> {
         if ((time - currentTime) >= executeEveryMilliseconds) {
             logger.info { "Executing Constant load pattern at $time" }
             val jobs = mutableListOf<Job>()

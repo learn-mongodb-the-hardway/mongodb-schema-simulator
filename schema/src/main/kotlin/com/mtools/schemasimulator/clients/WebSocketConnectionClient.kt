@@ -32,6 +32,10 @@ class WebSocketConnectionClient(
     private fun attemptReconnect(c: Client) {
         // Attempt to reconnect if the client failed (TODO silly simple way)
         while(true) {
+            // Is the connection dead
+            if (destroyed) break
+
+            // Sleep for a little
             Thread.sleep(waitMSBetweenReconnectAttempts)
 
             // No more attempts left, throw an error
@@ -71,8 +75,8 @@ class WebSocketConnectionClient(
     }
 
     fun disconnect() {
-        destroyed = true
         client.destroy()
+        destroyed = true
     }
 
     private class Client(

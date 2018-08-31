@@ -17,3 +17,9 @@ data class Configure(val name: String, val config: String) : MethodCall("configu
 class ConfigureResponse(id: Long) : MethodResponse("configure", id)
 
 class ConfigureErrorResponse(id: Long, message: String, errorCode: Int) : MethodErrorResponse("configure", id, message, errorCode)
+
+class Tick(val time: Long) : MethodCall("tick")
+
+class Stop(val name: String) : MethodCall("stop")
+
+class RegisterResponse(id: Long) : MethodResponse("register", id)
