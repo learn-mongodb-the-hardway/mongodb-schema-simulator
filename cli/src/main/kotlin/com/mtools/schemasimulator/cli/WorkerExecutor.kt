@@ -19,7 +19,7 @@ class WorkerExecutor(private val config: WorkerExecutorConfig) : Executor {
     fun start() {
         // On open function
         val onOpen = fun(client: WebSocketConnectionClient) {
-            logger.info { "Worker received onOpen event" }
+            logger.info { "Worker received onOpen event [${config.uri.host}:${config.uri.port}]" }
             client.send(Register(config.uri.host, config.uri.port))
         }
 

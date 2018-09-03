@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.logger.NoopLogger
+import com.mtools.schemasimulator.schemas.IndexClass
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.launch
 import kotlin.system.measureNanoTime
@@ -36,6 +37,16 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
 
     abstract fun run(logEntry: LogEntry = LogEntry(""))
     abstract fun afterAll()
+
+    fun createIndexes(indexCreator: IndexClass) {
+        // Create all relevant indexes
+        indexCreator.indexes.forEach {
+            mongodbConnection()
+                .getDatabase(it.db)
+                .getCollection(it.collection)
+                .createIndex(it.keys, it.options)
+        }
+    }
 }
 
 class ThreadedSimulationExecutor(

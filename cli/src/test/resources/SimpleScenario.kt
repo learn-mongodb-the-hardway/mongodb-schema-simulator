@@ -9,6 +9,7 @@ import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGenerator
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGeneratorOptions
+import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartIndexes
 import org.bson.Document
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotNull
@@ -50,6 +51,9 @@ class SimpleSimulation(seedUserId: Int = 1,
         ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
             numberOfDocuments, 100
         ))
+
+        // Generate all the indexes
+        createIndexes(ShoppingCartIndexes(carts, inventories, orders))
     }
 
     override fun before() {

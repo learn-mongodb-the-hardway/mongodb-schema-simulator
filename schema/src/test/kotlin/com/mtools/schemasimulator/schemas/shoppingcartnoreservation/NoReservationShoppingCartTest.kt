@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator.schemas.shoppingcartreservation
+package com.mtools.schemasimulator.schemas.shoppingcartnoreservation
 
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
@@ -8,6 +8,7 @@ import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.f
 import com.mtools.schemasimulator.g
 import com.mtools.schemasimulator.shouldContainValues
+import com.mtools.schemasimulator.shouldNoContainFields
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.jupiter.api.AfterAll
@@ -16,12 +17,12 @@ import org.junit.jupiter.api.Test
 import java.util.*
 import kotlin.test.assertNotNull
 
-class ReservationShoppingCartTest {
+class NoReservationShoppingCartTest {
     @Test
     fun successfulAddProductToShoppingCartTest() {
         val userId = 1
         // Attempt to create a shopping cart
-        val action = AddProductToShoppingCart(LogEntry(""), carts, inventories)
+        val action = AddProductToShoppingCart(LogEntry(""), carts)
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
         ))).first()
@@ -32,17 +33,14 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Fire the action
-        action.execute(ReservationShoppingCartValues(
+        action.execute(NoReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
         // Get the generated documents
         val cartR = carts
             .find(Document(mapOf("_id" to userId))).first()
-        val inventoryR = inventories
-            .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
-        assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf<String, f>(
             "_id" to f(userId, Integer(0), false),
@@ -52,15 +50,6 @@ class ReservationShoppingCartTest {
             "products.0.quantity" to f(1, Integer(0), false),
             "products.0.name" to f(f.Skip(), String(), false),
             "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
-        ))
-
-        inventoryR.shouldContainValues(mapOf<String, f>(
-            "_id" to f(f.Skip(), ObjectId(), false),
-            "quantity" to f(inventory.getInteger("quantity") - 1, Integer(0), false),
-            "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to f(userId, Integer(0), false),
-            "reservations.0.quantity" to f(1, Integer(0), false),
-            "reservations.0.createdOn" to f(f.Skip(), Date(), false)
         ))
     }
 
@@ -78,22 +67,19 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts).execute(NoReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
+        UpdateReservationQuantityForAProduct(LogEntry(""), carts).execute(NoReservationShoppingCartValues(
             userId = userId, quantity = 2, product = product
         ))
 
         // Get the generated documents
         val cartR = carts
             .find(Document(mapOf("_id" to userId))).first()
-        val inventoryR = inventories
-            .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
-        assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf<String, f>(
             "_id" to f(userId, Integer(0), false),
@@ -103,74 +89,6 @@ class ReservationShoppingCartTest {
             "products.0.quantity" to f(2, Integer(0), false),
             "products.0.name" to f(f.Skip(), String(), false),
             "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
-        ))
-
-        inventoryR.shouldContainValues(mapOf<String, f>(
-            "_id" to f(f.Skip(), ObjectId(), false),
-            "quantity" to f(inventory.getInteger("quantity") - 2, Integer(0), false),
-            "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to f(userId, Integer(0), false),
-            "reservations.0.quantity" to f(2, Integer(0), false),
-            "reservations.0.createdOn" to f(f.Skip(), Date(), false)
-        ))
-    }
-
-    @Test
-    fun failUpdateReservationQuantityForAProductDueToLimitedStockTest() {
-        val userId = 3
-        // Attempt to create a shopping cart
-        val inventory = inventories.find(Document(mapOf(
-            "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
-        ))).first()
-        val product = products.find(Document(mapOf(
-            "_id" to inventory["_id"]
-        ))).first()
-        assertNotNull(inventory)
-        assertNotNull(product)
-
-        // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
-
-        // Get the generated documents
-        val preCartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
-        val preInventoryR = inventories
-            .find(Document(mapOf("_id" to product["_id"]))).first()
-        assertNotNull(preCartR)
-        assertNotNull(preInventoryR)
-
-        // Update the cart
-        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = Int.MAX_VALUE, product = product
-        ))
-
-        // Get the generated documents
-        val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
-        val inventoryR = inventories
-            .find(Document(mapOf("_id" to product["_id"]))).first()
-        assertNotNull(cartR)
-        assertNotNull(inventoryR)
-
-        cartR.shouldContainValues(mapOf(
-            "_id" to userId,
-            "state" to "active",
-            "modifiedOn" to f(f.Skip(), Date(), false),
-            "products.0._id" to preCartR.g("products.0._id"),
-            "products.0.quantity" to preCartR.g("products.0.quantity"),
-            "products.0.name" to preCartR.g("products.0.name"),
-            "products.0.price" to preCartR.g("products.0.price")
-        ))
-
-        inventoryR.shouldContainValues(mapOf(
-            "_id" to preInventoryR.g("_id"),
-            "quantity" to preInventoryR.g("quantity"),
-            "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to preInventoryR.g("reservations.0._id"),
-            "reservations.0.quantity" to preInventoryR.g("reservations.0.quantity"),
-            "reservations.0.createdOn" to preInventoryR.g("reservations.0.createdOn")
         ))
     }
 
@@ -188,13 +106,13 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts).execute(NoReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
         // Force the expire by setting a cutOff date that is expired
         val date = Date(Date().time + 20000000)
-        ExpireCarts(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
+        ExpireCarts(LogEntry(""), carts, inventories).execute(NoReservationShoppingCartValues(
             cutOffDate = date
         ))
 
@@ -219,8 +137,11 @@ class ReservationShoppingCartTest {
         inventoryR.shouldContainValues(mapOf(
             "_id" to f(f.Skip(), ObjectId(), false),
             "quantity" to inventory.g("quantity"),
-            "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations" to f(f.Skip(), mutableListOf<Document>(), false, 0)
+            "modifiedOn" to f(f.Skip(), Date(), false)
+        ))
+
+        inventoryR.shouldNoContainFields(listOf(
+            "reservations"
         ))
     }
 
@@ -238,7 +159,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
+        AddProductToShoppingCart(LogEntry(""), carts).execute(NoReservationShoppingCartValues(
             userId = userId, quantity = 1, product = product
         ))
 
@@ -251,7 +172,7 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Checkout
-        CheckoutCart(LogEntry(""), carts, inventories, orders).execute(ReservationShoppingCartValues(
+        CheckoutCart(LogEntry(""), carts, inventories, orders).execute(NoReservationShoppingCartValues(
             userId = userId,
             name = "Peter",
             address = "Peter street 1",
@@ -281,9 +202,11 @@ class ReservationShoppingCartTest {
             "products.0.price" to preCartR.g("products.0.price")
         ))
 
+        val quantity = preInventoryR.g("quantity") as Int
+
         inventoryR.shouldContainValues(mapOf(
             "_id" to preInventoryR.g("_id"),
-            "quantity" to preInventoryR.g("quantity"),
+            "quantity" to quantity - 1,
             "modifiedOn" to f(f.Skip(), Date(), false),
             "reservations" to f(f.Skip(), mutableListOf<Document>(), false, 0)
         ))

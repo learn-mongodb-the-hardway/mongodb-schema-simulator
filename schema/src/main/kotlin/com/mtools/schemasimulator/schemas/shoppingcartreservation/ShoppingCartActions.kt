@@ -1,10 +1,14 @@
 package com.mtools.schemasimulator.schemas.shoppingcartreservation
 
 import com.mongodb.client.MongoCollection
+import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.UpdateOptions
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.Action
 import com.mtools.schemasimulator.schemas.ActionValues
+import com.mtools.schemasimulator.schemas.Index
+import com.mtools.schemasimulator.schemas.IndexClass
+import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
 import org.bson.types.ObjectId
 import java.util.*
@@ -21,6 +25,22 @@ data class ReservationShoppingCartValues(
     val newQuantity: Int = 0,
     val oldQuantity: Int = 0
 ): ActionValues
+
+class ShoppingCartIndexes(private val carts: MongoCollection<Document>,
+                          private val inventories: MongoCollection<Document>,
+                          private val orders: MongoCollection<Document>) : IndexClass {
+    override val indexes = listOf(
+        Index(inventories.namespace.databaseName, inventories.namespace.collectionName,
+            Indexes.ascending("reservations._id")
+        ),
+        Index(carts.namespace.databaseName, carts.namespace.collectionName,
+            Indexes.ascending("modifiedOn")
+        ),
+        Index(carts.namespace.databaseName, carts.namespace.collectionName,
+            Indexes.ascending("state")
+        )
+    )
+}
 
 class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Document>,
                    private val inventories: MongoCollection<Document>,
@@ -120,7 +140,7 @@ class ExpireCarts(logEntry: LogEntry,
 
         carts.find(Document(mapOf(
             "modifiedOn" to mapOf(
-                "\$gt" to values.cutOffDate
+                "\$lte" to values.cutOffDate
             ),
             "state" to "active"
         ))).forEach { cart ->
@@ -230,7 +250,7 @@ class UpdateReservationQuantityForAProduct(logEntry: LogEntry,
                     )
                 )))
 
-                // Failt to modify the cart
+                // Fail to modify the cart
                 if (result.modifiedCount == 0L) {
                     throw SchemaSimulatorException("failed to modify cart for user ${values.userId}")
                 }
@@ -312,6 +332,7 @@ class UpdateReservationQuantityForAProduct(logEntry: LogEntry,
         }
     }
 }
+
 
 class AddProductToShoppingCart(logEntry: LogEntry,
                                private val carts: MongoCollection<Document>,
@@ -437,6 +458,3 @@ class AddProductToShoppingCart(logEntry: LogEntry,
         }
     }
 }
-
-class SchemaSimulatorException(message: String): Exception(message)
-

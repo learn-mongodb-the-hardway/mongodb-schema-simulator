@@ -9,6 +9,7 @@ import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGenerator
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGeneratorOptions
+import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartIndexes
 import org.bson.Document
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotNull
@@ -50,6 +51,9 @@ class SimpleSimulation(seedUserId: Int = 1,
         ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
             numberOfDocuments, 100
         ))
+
+        // Generate all the indexes
+        createIndexes(ShoppingCartIndexes(carts, inventories, orders))
     }
 
     override fun before() {
@@ -77,7 +81,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         CheckoutCart(logEntry, carts, inventories, orders).execute(ReservationShoppingCartValues(
             userId = currentUserId,
             name = "Some random name",
-            address = "Aome random address",
+            address = "Acme random address",
             payment = Document(mapOf(
                 "method" to "visa",
                 "transaction_id" to Math.round(Math.random() * Long.MAX_VALUE).toString()
@@ -134,7 +138,7 @@ config {
                 // executed instances of the simulation
                 numberOfCExecutions(2)
                 // Execute every 100 milliseconds
-                executeEveryMilliseconds(2)
+                executeEveryMilliseconds(4)
             }
 
             // Simulation

@@ -1,4 +1,4 @@
-package com.mtools.schemasimulator.schemas.shoppingcartreservation
+package com.mtools.schemasimulator.schemas.shoppingcartnoreservation
 
 import com.github.javafaker.Faker
 import com.mongodb.client.MongoCollection
@@ -14,6 +14,7 @@ import com.mtools.schemasimulator.schemas.IntegerGenerator
 import com.mtools.schemasimulator.schemas.IntegerType
 import com.mtools.schemasimulator.schemas.ObjectIdType
 import com.mtools.schemasimulator.schemas.PrimitiveField
+import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import com.mtools.schemasimulator.schemas.StringType
 import com.mtools.schemasimulator.schemas.template
 import org.bson.Document

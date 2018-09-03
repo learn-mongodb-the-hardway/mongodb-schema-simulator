@@ -5,6 +5,7 @@ import com.mtools.schemasimulator.logger.MetricLogger
 import org.bson.Document
 import java.util.ArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 data class f(val value: Any? = Skip(), val klass: Any? = Skip(), val isNull: Boolean = false, val listSize: Int? = null) {
@@ -45,6 +46,12 @@ fun Document.shouldContainValues(values: Map<String, Any>) {
     }
 }
 
+fun Document.shouldNoContainFields(paths: List<String>) {
+    paths.forEach { path ->
+        assertFalse { exists(path) }
+    }
+}
+
 fun Document.g(path: String) : Any {
     var field: Any = this
 
@@ -58,6 +65,23 @@ fun Document.g(path: String) : Any {
     }
 
     return field
+}
+
+fun Document.exists(path: String) : Boolean {
+    var field: Any? = this
+
+    for(part in path.split(".")) {
+        if (field == null) return false
+
+        field = when (field) {
+            is Document -> field[part]
+            is ArrayList<*> -> field[part.toInt()]
+            is Array<*> -> field[part.toInt()]
+            else -> field
+        }
+    }
+
+    return field != null
 }
 
 class TestMetricLogger(): MetricLogger {
