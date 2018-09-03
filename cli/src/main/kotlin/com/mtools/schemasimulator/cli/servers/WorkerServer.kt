@@ -58,7 +58,7 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                 // Set the name
                 name = configure.name
 
-                logger.info { "[$name]: received config message, setup slave executor" }
+                logger.info { "[$name]: received config message, setup worker executor" }
 
                 // Load the scenario
                 val result = engine.eval(configure.configString)

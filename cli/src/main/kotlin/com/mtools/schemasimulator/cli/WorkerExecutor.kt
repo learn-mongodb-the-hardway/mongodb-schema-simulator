@@ -29,7 +29,7 @@ class WorkerExecutor(private val config: WorkerExecutorConfig) : Executor {
             config.maxReconnectAttempts,
             config.waitMSBetweenReconnectAttempts,
             onOpen) { _, message ->
-            logger.debug ("Slave received message: [$message]")
+            logger.debug ("Worker received message: [$message]")
         }
 
         // Shutdown handler

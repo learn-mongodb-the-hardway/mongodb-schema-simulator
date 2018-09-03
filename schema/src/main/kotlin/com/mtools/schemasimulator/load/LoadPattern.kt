@@ -12,13 +12,13 @@ interface LoadPattern {
 
 /*
   MasterTicker
-    -> SlavedTicker (Local/Distributed)
+    -> WorkerTicker (Local/Distributed)
         -> tick
             -> load pattern
                 -> simulator
             -> load pattern
                 -> simulator
-    -> SlavedTicker
+    -> WorkerTicker
 
 
  */

@@ -1,6 +1,6 @@
 Message flow
 
-Slave
+Worker
  - initialize
  - send register message to master
  - receive configure message from master

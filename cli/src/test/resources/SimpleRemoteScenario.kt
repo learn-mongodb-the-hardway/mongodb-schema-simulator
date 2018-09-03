@@ -105,7 +105,7 @@ config {
         // Run for 1000 ticks or in this case 1000 simulated milliseconds
         runForNumberOfTicks(11)
 
-        // Local running slave thread
+        // Local running worker thread
         remote {
             name("local1")
 
@@ -124,7 +124,7 @@ config {
             )
         }
 
-        // Local running slave thread
+        // Local running worker thread
         remote {
             name("local2")
 

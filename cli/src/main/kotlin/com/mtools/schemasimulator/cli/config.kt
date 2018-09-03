@@ -38,7 +38,7 @@ class GeneralConfig(parser: ArgParser) {
             }
         }
 
-    val slave by parser.flagging("--slave", help = "Instance is a slave instance").default(false)
+    val worker by parser.flagging("--worker", help = "Instance is a worker instance").default(false)
 
     val master by parser.flagging("--master", help = "Instance is a master instance").default(false)
 
@@ -46,12 +46,12 @@ class GeneralConfig(parser: ArgParser) {
         .default(null)
         .addValidator {
             // Value must be set
-            if (value == null && slave) {
-                throw SystemExitException("option '--master-uri must be specified if slave is set'", 2)
+            if (value == null && worker) {
+                throw SystemExitException("option '--master-uri must be specified if worker is set'", 2)
             }
 
             // Validate the connection uri passed in
-            if (slave) {
+            if (worker) {
                 val parts = value!!.split(":")
                 if (parts.size < 2) {
                     throw SystemExitException("option 'master-uri must be of the format <host:port>'", 2)
@@ -69,7 +69,7 @@ class GeneralConfig(parser: ArgParser) {
     val host by parser.storing("-h", "--host", help = "General: The host we are binding too")
         .default(null)
         .addValidator {
-            if (value == null && (master || slave)) {
+            if (value == null && (master || worker)) {
                 throw SystemExitException("option --port must be specified", 2)
             }
         }
@@ -77,12 +77,12 @@ class GeneralConfig(parser: ArgParser) {
     val port by parser.storing("-p", "--port", help = "General: The host we are binding too")
         .default(null)
         .addValidator {
-            if (value == null && (master || slave)) {
+            if (value == null && (master || worker)) {
                 throw SystemExitException("option --port must be specified", 2)
             }
 
             // Check if we can parse the port
-            if ((master || slave)) {
+            if ((master || worker)) {
                 try {
                     value!!.toInt()
                 } catch (ex: Exception) {

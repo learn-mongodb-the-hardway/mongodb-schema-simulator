@@ -15,7 +15,7 @@ class ExecutorTest {
     }
 
     @Test
-    fun correctlyExecuteMasterSlaveConfig() {
+    fun correctlyExecuteMasterWorkerConfig() {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(
             true,
@@ -23,13 +23,13 @@ class ExecutorTest {
             InputStreamReader(ClassLoader.getSystemResourceAsStream("SimpleRemoteScenario.kt")).readText()
         ))
 
-        // Setup two slave Executors
-        val slaveExecutor1 = WorkerExecutor(WorkerExecutorConfig(
+        // Setup two worker Executors
+        val workerExecutor1 = WorkerExecutor(WorkerExecutorConfig(
             URI.create("http://127.0.0.1:14500"),
             URI.create("http://127.0.0.1:14501")
         ))
 
-        val slaveExecutor2 = WorkerExecutor(WorkerExecutorConfig(
+        val workerExecutor2 = WorkerExecutor(WorkerExecutorConfig(
             URI.create("http://127.0.0.1:14500"),
             URI.create("http://127.0.0.1:14502")
         ))
@@ -40,33 +40,33 @@ class ExecutorTest {
             println("  +++++++++++++++++++++++ STOP MASTER")
         })
 
-        val slaveThread1 = Thread(Runnable {
-            println("  +++++++++++++++++++++++ START SLAVE1")
-            slaveExecutor1.start()
-            println("  +++++++++++++++++++++++ STOP SLAVE1")
+        val workerThread1 = Thread(Runnable {
+            println("  +++++++++++++++++++++++ START WORKER1")
+            workerExecutor1.start()
+            println("  +++++++++++++++++++++++ STOP WORKER1")
         })
 
-        val slaveThread2 = Thread(Runnable {
-            println("  +++++++++++++++++++++++ START SLAVE2")
-            slaveExecutor2.start()
-            println("  +++++++++++++++++++++++ STOP SLAVE2")
+        val workerThread2 = Thread(Runnable {
+            println("  +++++++++++++++++++++++ START WORKER2")
+            workerExecutor2.start()
+            println("  +++++++++++++++++++++++ STOP WORKER2")
         })
 
         println("+++++++++++++++++++++++ START MASTER")
         // Start the threads
         masterThread.start()
-        println("+++++++++++++++++++++++ START SLAVE1")
-        slaveThread1.start()
-        println("+++++++++++++++++++++++ START SLAVE2")
-        slaveThread2.start()
+        println("+++++++++++++++++++++++ START WORKER1")
+        workerThread1.start()
+        println("+++++++++++++++++++++++ START WORKER2")
+        workerThread2.start()
 
         // Wait for them to be done
         println("+++++++++++++++++++++++ WAIT FOR MASTER")
         masterThread.join()
-        println("+++++++++++++++++++++++ WAIT FOR SLAVE1")
-        slaveThread1.join()
-        println("+++++++++++++++++++++++ WAIT FOR SLAVE2")
-        slaveThread2.join()
+        println("+++++++++++++++++++++++ WAIT FOR WORKER1")
+        workerThread1.join()
+        println("+++++++++++++++++++++++ WAIT FOR WORKER2")
+        workerThread2.join()
         println("+++++++++++++++++++++++ ALL DONE")
     }
 }

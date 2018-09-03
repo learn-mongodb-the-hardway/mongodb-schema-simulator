@@ -40,7 +40,7 @@ class ConfigHelper : Helper<Config>() {
 }
 
 class CoordinatorHelper: Helper<CoordinatorConfig>() {
-    private val tickers: MutableList<SlaveTickerConfig> = mutableListOf()
+    private val tickers: MutableList<WorkerTickerConfig> = mutableListOf()
     private var tickResolutionMilliseconds: Long = 1L
     private var runForNumberOfTicks: Long = 1000L
 
@@ -69,12 +69,12 @@ class CoordinatorHelper: Helper<CoordinatorConfig>() {
     }
 }
 
-class RemoteHelper: Helper<SlaveTickerConfig>() {
+class RemoteHelper: Helper<WorkerTickerConfig>() {
     private lateinit var loadPatternConfig: LoadPatternConfig
     private lateinit var simulation: Simulation
     private var name: String = "remote_${Date().time}"
 
-    override fun build(): SlaveTickerConfig {
+    override fun build(): WorkerTickerConfig {
         return RemoteConfig(name, loadPatternConfig, simulation)
     }
 
@@ -93,12 +93,12 @@ class RemoteHelper: Helper<SlaveTickerConfig>() {
     }
 }
 
-class LocalHelper: Helper<SlaveTickerConfig>() {
+class LocalHelper: Helper<WorkerTickerConfig>() {
     private lateinit var loadPatternConfig: LoadPatternConfig
     private lateinit var simulation: Simulation
     private var name: String = "local_${Date().time}"
 
-    override fun build(): SlaveTickerConfig {
+    override fun build(): WorkerTickerConfig {
         return LocalConfig(name, loadPatternConfig, simulation)
     }
 
@@ -153,13 +153,13 @@ data class ConstantConfig(val numberOfCExecutions: Long,
      val executeEveryMilliseconds: Long
 ) : LoadPatternConfig
 
-interface SlaveTickerConfig
+interface WorkerTickerConfig
 
-data class LocalConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
+data class LocalConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : WorkerTickerConfig
 
-data class RemoteConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : SlaveTickerConfig
+data class RemoteConfig(val name: String, val loadPatternConfig: LoadPatternConfig, val simulation: Simulation) : WorkerTickerConfig
 
-data class CoordinatorConfig(val tickers: LinkedBlockingDeque<SlaveTickerConfig>, val tickResolutionMiliseconds: Long, val runForNumberOfTicks: Long)
+data class CoordinatorConfig(val tickers: LinkedBlockingDeque<WorkerTickerConfig>, val tickResolutionMiliseconds: Long, val runForNumberOfTicks: Long)
 
 data class Config(val mongo: MongoConfig, val coordinator: CoordinatorConfig)
 
