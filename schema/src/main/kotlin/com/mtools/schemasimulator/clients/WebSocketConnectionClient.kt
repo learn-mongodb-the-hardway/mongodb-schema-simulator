@@ -94,12 +94,12 @@ class WebSocketConnectionClient(
         }
 
         override fun onOpen(handshakedata: ServerHandshake?) {
-            logger.info { "connection opened" }
+            logger.info { "connection opened to [${uri.host}:${uri.port}]" }
             onOpen(client)
         }
 
         override fun onClose(code: Int, reason: String?, remote: Boolean) {
-            logger.info { "connection closed from master: $code::$reason::$remote" }
+            logger.info { "connection closed from [${uri.host}:${uri.port}] with: $code::$reason::$remote" }
             onErrors()
         }
 
@@ -108,7 +108,7 @@ class WebSocketConnectionClient(
         }
 
         override fun onError(ex: Exception?) {
-            logger.error { "connection error: $ex" }
+            logger.error { "connection error from [${uri.host}:${uri.port}]: $ex" }
             onErrors()
         }
 

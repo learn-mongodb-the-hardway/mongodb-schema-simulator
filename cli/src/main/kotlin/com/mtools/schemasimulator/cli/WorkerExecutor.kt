@@ -1,25 +1,25 @@
 package com.mtools.schemasimulator.cli
 
 import com.mtools.schemasimulator.clients.WebSocketConnectionClient
-import com.mtools.schemasimulator.cli.servers.SlaveServer
+import com.mtools.schemasimulator.cli.servers.WorkerServer
 import com.mtools.schemasimulator.messages.worker.Register
 import kotlinx.coroutines.experimental.launch
 import mu.KLogging
 import java.net.URI
 
-data class SlaveExecutorConfig(
+data class WorkerExecutorConfig(
     val masterURI: URI,
     val uri: URI,
     val maxReconnectAttempts: Int = 30,
     val waitMSBetweenReconnectAttempts: Long = 1000)
 
-class SlaveExecutor(private val config: SlaveExecutorConfig) : Executor {
+class WorkerExecutor(private val config: WorkerExecutorConfig) : Executor {
     lateinit var client: WebSocketConnectionClient
 
     fun start() {
         // On open function
         val onOpen = fun(client: WebSocketConnectionClient) {
-            logger.info { "Slave received onOpen event" }
+            logger.info { "Worker received onOpen event" }
             client.send(Register(config.uri.host, config.uri.port))
         }
 
@@ -29,11 +29,13 @@ class SlaveExecutor(private val config: SlaveExecutorConfig) : Executor {
             config.maxReconnectAttempts,
             config.waitMSBetweenReconnectAttempts,
             onOpen) { _, message ->
-            logger.info("Slave received message: [$message]")
+            logger.debug ("Slave received message: [$message]")
         }
 
         // Shutdown handler
-        val onShutdown = fun(s: SlaveServer) {
+        val onShutdown = fun(s: WorkerServer) {
+            logger.info { "Worker shutting down" }
+
             launch {
                 s.stop()
                 client.disconnect()
@@ -41,10 +43,10 @@ class SlaveExecutor(private val config: SlaveExecutorConfig) : Executor {
         }
 
         // We are going to set up our services on the provided host and port
-        val server = SlaveServer(config, onShutdown)
+        val server = WorkerServer(config, onShutdown)
         // Start the server`
         server.start()
-        // Start the websocket client connection
+        // Start the Websocket client connection
         client.connect()
     }
 

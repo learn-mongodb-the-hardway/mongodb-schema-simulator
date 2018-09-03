@@ -60,7 +60,7 @@ object App : KLogging() {
         val stream = BufferedInputStream(File(config.general.config!!).inputStream())
 
         if (config.general.slave) {
-            SlaveExecutor(SlaveExecutorConfig(
+            WorkerExecutor(WorkerExecutorConfig(
                 URI("http://${config.general.masterURI}"),
                 URI("http://${config.general.host}:${config.general.port}")
             ))

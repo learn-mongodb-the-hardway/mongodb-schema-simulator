@@ -21,7 +21,7 @@ import org.bson.Document
 class ShoppingCartDataGeneratorOptions(
     val numberOfDocuments: Int, val minimumInventoryQuantity: Int) : DataGeneratorOptions
 
-class ShoppingCartDataGenerator(val db: MongoDatabase): DataGenerator {
+class ShoppingCartDataGenerator(private val db: MongoDatabase): DataGenerator {
     override fun generate(options: DataGeneratorOptions) {
         val maxDocumentsInBatch = 1000
 
@@ -73,7 +73,7 @@ private class ProductNameGenerator: Generator {
     }
 }
 
-class DocumentGenerator(val template: DocumentTemplate) {
+class DocumentGenerator(private val template: DocumentTemplate) {
     private val functions = mutableListOf<(document:Document) -> Unit>()
 
     fun generate(map: Map<String, Any> = mapOf()): Document {
@@ -101,9 +101,5 @@ class DocumentGenerator(val template: DocumentTemplate) {
     fun forEach(function: (document:Document) -> Unit) : DocumentGenerator {
         functions += function
         return this
-    }
-
-    fun insert(collection: MongoCollection<Document>, values: Map<String, Any> = mapOf()) {
-        collection.insertOne(generate(values))
     }
 }

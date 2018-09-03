@@ -4,7 +4,7 @@ import com.beust.klaxon.Klaxon
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.MongoException
-import com.mtools.schemasimulator.cli.SlaveExecutorConfig
+import com.mtools.schemasimulator.cli.WorkerExecutorConfig
 import com.mtools.schemasimulator.cli.config.Config
 import com.mtools.schemasimulator.cli.config.ConstantConfig
 import com.mtools.schemasimulator.cli.config.RemoteConfig
@@ -28,7 +28,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.script.ScriptEngineManager
 
-class SlaveServer(val config: SlaveExecutorConfig, val onClose: (s: SlaveServer) -> Unit): WebSocketServer(InetSocketAddress(config.uri.host, config.uri.port)) {
+class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServer) -> Unit): WebSocketServer(InetSocketAddress(config.uri.host, config.uri.port)) {
     private val configureMessage = """method"\s*:\s*"configure"""".toRegex()
     private val tickMessage = """method"\s*:\s*"tick"""".toRegex()
     private val stopMessage = """method"\s*:\s*"stop"""".toRegex()
@@ -42,15 +42,15 @@ class SlaveServer(val config: SlaveExecutorConfig, val onClose: (s: SlaveServer)
     private val engine = ScriptEngineManager().getEngineByExtension("kts")!!
 
     override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
-        logger.info { "connection from client: ${conn!!.remoteSocketAddress.address.hostAddress}" }
+        logger.info { "connection from client: [${conn!!.remoteSocketAddress.address.hostAddress}]" }
     }
 
     override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
-        logger.info { "connection closed from client: ${conn!!.remoteSocketAddress.address.hostAddress}" }
+        logger.info { "connection closed from client: [${conn!!.remoteSocketAddress.address.hostAddress}]" }
     }
 
     override fun onMessage(conn: WebSocket?, message: String?) {
-        logger.info { "onMessage from [${conn!!.remoteSocketAddress.address.hostAddress}]: [$message]" }
+        logger.debug { "onMessage from [${conn!!.remoteSocketAddress.address.hostAddress}]: [$message]" }
 
         if (message != null && message.contains(configureMessage) && conn != null) {
             val configure = Klaxon().parse<Configure>(message)
@@ -120,7 +120,7 @@ class SlaveServer(val config: SlaveExecutorConfig, val onClose: (s: SlaveServer)
         } else if (message != null && message.contains(tickMessage) && conn != null) {
             val tick = Klaxon().parse<Tick>(message)
             if (tick != null) {
-                logger.info { "[$name]: received tick message: ${tick.time}" }
+                logger.debug { "[$name]: received tick message: ${tick.time}" }
 
                 // For each ticker tick a tick
                 localWorkers.values.forEach {

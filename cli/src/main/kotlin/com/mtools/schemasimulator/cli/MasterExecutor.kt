@@ -173,7 +173,6 @@ class MasterExecutorServer(config: MasterExecutorConfig): WebSocketServer(InetSo
 
 class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
     private val masterExecutorServer = MasterExecutorServer(config)
-    private val configureReplyMessage = """method"\s*:\s*"configure"""".toRegex()
 
     fun start() {
         var mongoClient: MongoClient?

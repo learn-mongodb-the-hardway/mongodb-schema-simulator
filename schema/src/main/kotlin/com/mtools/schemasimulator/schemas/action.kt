@@ -5,7 +5,7 @@ import kotlin.system.measureNanoTime
 
 interface ActionValues
 
-abstract class Action(val logEntry: LogEntry) {
+abstract class Action(protected val logEntry: LogEntry) {
     abstract fun run(values: ActionValues) : Map<String, Any>
 
     fun execute(values: ActionValues) : Map<String, Any> {

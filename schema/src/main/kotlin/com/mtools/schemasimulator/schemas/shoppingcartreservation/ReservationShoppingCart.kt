@@ -3,7 +3,6 @@ package com.mtools.schemasimulator.schemas.shoppingcartreservation
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.UpdateOptions
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.schemas.Action
 import com.mtools.schemasimulator.schemas.ActionValues
 import org.bson.Document

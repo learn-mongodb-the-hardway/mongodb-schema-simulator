@@ -39,7 +39,7 @@ class Document(override val name: String? = null, val fields: MutableList<Field>
     }
 }
 
-class DocumentArray(override val name: String, val fields: MutableList<Field> = mutableListOf()): Field {
+class DocumentArray(override val name: String, private val fields: MutableList<Field> = mutableListOf()): Field {
     operator fun plus(field: Field) {
         fields += field
     }
@@ -71,13 +71,20 @@ class FullNameGenerator : BasicStringGenerator() {
     }
 }
 
-class DoubleGenerator(val maxNumberOfDecimals: Int = 2, val min: Int = 0, val max: Int = Int.MAX_VALUE) : Generator {
+class DoubleGenerator(
+    private val maxNumberOfDecimals: Int = 2,
+    private val min: Int = 0,
+    private val max: Int = Int.MAX_VALUE) : Generator {
+
     override fun generate() : Any {
         return Faker().number().randomDouble(maxNumberOfDecimals, min, max)
     }
 }
 
-class IntegerGenerator(val min: Int = 0, val max: Int = Int.MAX_VALUE) : Generator {
+class IntegerGenerator(
+    private val min: Int = 0,
+    private val max: Int = Int.MAX_VALUE) : Generator {
+
     override fun generate() : Any {
         return Faker().number().numberBetween(min, max)
     }
@@ -89,7 +96,10 @@ class ObjectIdGenerator : Generator {
     }
 }
 
-class Decimal128TypeGenerator(val min: Double = Double.MIN_VALUE, val max: Double = Double.MAX_VALUE) : Generator {
+class Decimal128TypeGenerator(
+    private val min: Double = Double.MIN_VALUE,
+    private val max: Double = Double.MAX_VALUE) : Generator {
+
     override fun generate(): Any {
         return Decimal128(BigDecimal((Faker().commerce().price(min, max))))
     }
@@ -101,7 +111,11 @@ class DateTypeGenerator() : Generator {
     }
 }
 
-class PrimitiveFieldHelper(val name: String, val type: Type, var generator: Generator?): Helper<PrimitiveField>() {
+class PrimitiveFieldHelper(
+    private val name: String,
+    private val type: Type,
+    private var generator: Generator?): Helper<PrimitiveField>() {
+
     override fun build(): PrimitiveField {
         if (generator == null) {
             generator = when (type) {

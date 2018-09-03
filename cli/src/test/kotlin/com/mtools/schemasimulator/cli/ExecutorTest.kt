@@ -1,6 +1,5 @@
 package com.mtools.schemasimulator.cli
 
-import kotlinx.coroutines.experimental.launch
 import org.junit.jupiter.api.Test
 import java.io.InputStreamReader
 import java.net.URI
@@ -25,12 +24,12 @@ class ExecutorTest {
         ))
 
         // Setup two slave Executors
-        val slaveExecutor1 = SlaveExecutor(SlaveExecutorConfig(
+        val slaveExecutor1 = WorkerExecutor(WorkerExecutorConfig(
             URI.create("http://127.0.0.1:14500"),
             URI.create("http://127.0.0.1:14501")
         ))
 
-        val slaveExecutor2 = SlaveExecutor(SlaveExecutorConfig(
+        val slaveExecutor2 = WorkerExecutor(WorkerExecutorConfig(
             URI.create("http://127.0.0.1:14500"),
             URI.create("http://127.0.0.1:14502")
         ))

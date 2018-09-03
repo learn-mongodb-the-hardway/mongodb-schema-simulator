@@ -21,5 +21,3 @@ class ConfigureErrorResponse(id: Long, message: String, errorCode: Int) : Method
 class Tick(val time: Long) : MethodCall("tick")
 
 class Stop(val name: String) : MethodCall("stop")
-
-class RegisterResponse(id: Long) : MethodResponse("register", id)
