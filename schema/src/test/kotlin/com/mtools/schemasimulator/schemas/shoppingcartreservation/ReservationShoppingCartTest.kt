@@ -192,7 +192,7 @@ class ReservationShoppingCartTest {
             userId = userId, quantity = 1, product = product
         ))
 
-        // Force the expire by setting a cutOff date that is expired
+        // Force the expireAllCarts by setting a cutOff date that is expired
         val date = Date(Date().time + 20000000)
         ExpireCarts(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
             cutOffDate = date
