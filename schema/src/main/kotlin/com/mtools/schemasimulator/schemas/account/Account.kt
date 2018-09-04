@@ -1,6 +1,7 @@
 package com.mtools.schemasimulator.schemas.account
 
 import com.mongodb.client.MongoCollection
+import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.UpdateOptions
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.Index
@@ -10,15 +11,22 @@ import org.bson.Document
 import org.bson.types.ObjectId
 import java.math.BigDecimal
 
-class Account(private val logEntry: LogEntry,
+class Account(logEntry: LogEntry,
               private val accounts: MongoCollection<Document>,
               private val transactions: MongoCollection<Document>,
-              val name: String, var balance: BigDecimal) : Scenario {
+              val name: String, var balance: BigDecimal) : Scenario(logEntry) {
+    override fun indexes(): List<Index> {
+        return listOf(
+            Index(accounts.namespace.databaseName, accounts.namespace.collectionName,
+                Indexes.ascending("name")
+            )
+        )
+    }
 
     /*
      * Create a new account document
      */
-    fun create() {
+    fun create() = log("create") {
         val result = accounts.updateOne(
             Document(mapOf(
                 "name" to name,
@@ -35,22 +43,18 @@ class Account(private val logEntry: LogEntry,
     /*
      * Transfer an amount to this account from the provided account
      */
-    fun transfer(toAccount: Account, amount: BigDecimal) {
-        val transaction = Transaction(accounts, transactions, ObjectId(), this, toAccount, amount)
+    fun transfer(toAccount: Account, amount: BigDecimal) = log("transfer") {
+        val transaction = Transaction(logEntry, accounts, transactions, ObjectId(), this, toAccount, amount)
         // Create transaction
         transaction.create()
         // Apply the transaction
         transaction.settle()
     }
 
-    override fun indexes(): List<Index> {
-        return listOf()
-    }
-
     /*
      * Debit the account with the specified amount
      */
-    fun debit(transactionId: ObjectId, amount: BigDecimal) {
+    fun debit(transactionId: ObjectId, amount: BigDecimal) = log("debit") {
         val result = accounts.updateOne(Document(mapOf(
             "name" to name,
             "pendingTransactions" to mapOf(
@@ -74,7 +78,7 @@ class Account(private val logEntry: LogEntry,
         }
     }
 
-    fun credit(transactionId: ObjectId, amount: BigDecimal) {
+    fun credit(transactionId: ObjectId, amount: BigDecimal) = log("credit") {
         val result = accounts.updateOne(Document(mapOf(
             "name" to name,
             "pendingTransactions" to mapOf(
@@ -95,7 +99,7 @@ class Account(private val logEntry: LogEntry,
         }
     }
 
-    fun clear(transactionId: ObjectId) {
+    fun clear(transactionId: ObjectId) = log("clear") {
         val result = accounts.updateOne(Document(mapOf(
             "name" to name
         )), Document(mapOf(
@@ -110,7 +114,7 @@ class Account(private val logEntry: LogEntry,
         }
     }
 
-    fun reload() {
+    fun reload() = log("reload") {
         val doc = accounts.find(Document(mapOf(
             "name" to name
         ))).firstOrNull()
@@ -125,12 +129,17 @@ class Account(private val logEntry: LogEntry,
 }
 
 private class Transaction(
+    logEntry: LogEntry,
     val accounts: MongoCollection<Document>,
     val transactions: MongoCollection<Document>,
     val id: ObjectId,
     val fromAccount: Account,
     val toAccount: Account,
-    val amount: BigDecimal) {
+    val amount: BigDecimal) : Scenario(logEntry) {
+    override fun indexes(): List<Index> {
+        return listOf()
+    }
+
     private var state: TransactionStates = TransactionStates.UNKNOWN
 
     enum class TransactionStates {
@@ -143,7 +152,7 @@ private class Transaction(
     }
 
 
-    fun create() {
+    fun create() = log("clear") {
         transactions.insertOne(Document(mapOf(
             "_id" to id,
             "source" to fromAccount.name,
@@ -158,7 +167,7 @@ private class Transaction(
     /*
      * Apply transaction to the accounts
      */
-    fun settle() {
+    fun settle() = log("settle") {
         // Advance the state of the transaction to pending
         advance()
 
@@ -203,7 +212,7 @@ private class Transaction(
     /*
      * Reverse the transactions on the current account if it exists
      */
-    fun reverse() {
+    fun reverse() = log("reverse") {
         // Reverse the debit
         accounts.updateOne(Document(mapOf(
             "name" to fromAccount.name,
@@ -238,7 +247,7 @@ private class Transaction(
         cancel()
     }
 
-    fun cancel() {
+    fun cancel() = log("cancel") {
         val result = transactions.updateOne(Document(mapOf(
             "id" to id
         )), Document(mapOf(
@@ -253,7 +262,7 @@ private class Transaction(
         }
     }
 
-    fun advance() {
+    fun advance() = log("advance") {
         state = when (state) {
             TransactionStates.INITIAL -> {
                 val result = transactions.updateOne(Document(mapOf(

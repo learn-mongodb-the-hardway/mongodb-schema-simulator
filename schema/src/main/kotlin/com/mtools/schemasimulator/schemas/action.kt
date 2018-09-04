@@ -1,10 +1,22 @@
 package com.mtools.schemasimulator.schemas
 
+import com.mongodb.ReadPreference
 import com.mongodb.client.model.IndexOptions
+import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.conversions.Bson
+import kotlin.system.measureNanoTime
 
-interface Scenario {
-    fun indexes(): List<Index>
+abstract class Scenario(protected val logEntry: LogEntry) {
+    abstract fun indexes(): List<Index>
+
+    // Log
+    protected fun log(name: String, block: () -> Unit) {
+        logEntry.add("${this.javaClass.simpleName}:$name", measureNanoTime(block))
+    }
+}
+
+interface AcceptsReadPreference {
+    fun setReadPreference(preference: ReadPreference)
 }
 
 data class Index(val db: String, val collection: String, val keys: Bson, val options: IndexOptions = IndexOptions())

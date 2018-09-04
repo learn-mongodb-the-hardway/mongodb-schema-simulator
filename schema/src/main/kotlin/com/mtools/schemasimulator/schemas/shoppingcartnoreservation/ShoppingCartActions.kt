@@ -12,15 +12,11 @@ import java.util.*
 import kotlin.system.measureNanoTime
 
 class ShoppingCart(
-    private val logEntry: LogEntry,
+    logEntry: LogEntry,
     private val carts: MongoCollection<Document>,
     private val inventories: MongoCollection<Document>,
     private val orders: MongoCollection<Document>
-) : Scenario {
-    // Log
-    private fun log(name: String, block: () -> Unit) {
-        logEntry.add("${this.javaClass.simpleName}:$name", measureNanoTime(block))
-    }
+) : Scenario(logEntry) {
 
     fun addProduct(userId: Any, quantity: Int, product: Document) = log("addProduct") {
         // Execute cart update
