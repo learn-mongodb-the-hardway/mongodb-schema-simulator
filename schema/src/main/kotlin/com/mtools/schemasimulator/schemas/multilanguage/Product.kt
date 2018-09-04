@@ -43,9 +43,6 @@ class Product(
     /*
      * Reload the product information
      */
-    /*
-     * Reload the category information
-     */
     fun reload() = log("reload") {
         val category = products.find(Document(mapOf(
             "_id" to id
