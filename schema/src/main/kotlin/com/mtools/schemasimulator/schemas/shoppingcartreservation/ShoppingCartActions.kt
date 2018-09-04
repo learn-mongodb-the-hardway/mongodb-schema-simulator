@@ -4,62 +4,36 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.UpdateOptions
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.schemas.Action
-import com.mtools.schemasimulator.schemas.ActionValues
 import com.mtools.schemasimulator.schemas.Index
-import com.mtools.schemasimulator.schemas.IndexClass
+import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
 import org.bson.types.ObjectId
 import java.util.*
+import kotlin.system.measureNanoTime
 
-data class ReservationShoppingCartValues(
-    val userId: Int = 0,
-    val name: String = "",
-    val address: String = "",
-    val quantity: Int = 0,
-    val payment: Map<String, Any> = mapOf(),
-    val product: Document = Document(),
-    val cutOffDate: Date = Date(),
-    val delta: Int = 0,
-    val newQuantity: Int = 0,
-    val oldQuantity: Int = 0
-): ActionValues
+class ShoppingCart(
+    private val logEntry: LogEntry,
+    private val carts: MongoCollection<Document>,
+    private val inventories: MongoCollection<Document>,
+    private val orders: MongoCollection<Document>
+) : Scenario {
+    // Log
+    private fun log(name: String, block: () -> Unit) {
+        logEntry.add("${this.javaClass.simpleName}:$name", measureNanoTime(block))
+    }
 
-class ShoppingCartIndexes(private val carts: MongoCollection<Document>,
-                          private val inventories: MongoCollection<Document>,
-                          private val orders: MongoCollection<Document>) : IndexClass {
-    override val indexes = listOf(
-        Index(inventories.namespace.databaseName, inventories.namespace.collectionName,
-            Indexes.ascending("reservations._id")
-        ),
-        Index(carts.namespace.databaseName, carts.namespace.collectionName,
-            Indexes.ascending("modifiedOn")
-        ),
-        Index(carts.namespace.databaseName, carts.namespace.collectionName,
-            Indexes.ascending("state")
-        )
-    )
-}
-
-class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Document>,
-                   private val inventories: MongoCollection<Document>,
-                   private val orders: MongoCollection<Document>) : Action(logEntry) {
-    override fun run(values: ActionValues): Map<String, Any> {
-        if (!(values is ReservationShoppingCartValues)) {
-            throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-        }
-
+    fun checkout(userId: Any, name: String, address: String, payment: Document) = log("checkout") {
         val cart = carts.find(Document(mapOf(
-            "_id" to values.userId,
+            "_id" to userId,
             "state" to "active"
         ))).first()
 
-        cart ?: throw SchemaSimulatorException("could not locate the cart for the user ${values.userId}")
+        cart ?: throw SchemaSimulatorException("could not locate the cart for the user $userId")
 
         // If no entries in the cart don't allow checkout
         if (cart.contains("products") && cart["products"] is List<*> && (cart["products"] as List<*>).size == 0) {
-            throw SchemaSimulatorException("cart for user ${values.userId} does not contain any products and cannot be checkout out")
+            throw SchemaSimulatorException("cart for user $userId does not contain any products and cannot be checkout out")
         }
 
         // Create an order Id
@@ -67,13 +41,13 @@ class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Docume
         // Insert an order document
         orders.insertOne(Document(mapOf(
             "_id" to orderId,
-            "userId" to values.userId,
+            "userId" to userId,
             "createdOn" to Date(),
             "shipping" to mapOf(
-                "name" to values.name,
-                "address" to values.address
+                "name" to name,
+                "address" to address
             ),
-            "payment" to values.payment,
+            "payment" to payment,
             "products" to cart["products"]
         )))
 
@@ -94,16 +68,16 @@ class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Docume
                 "_id" to orderId
             )))
 
-            throw SchemaSimulatorException("could not update cart for user ${values.userId} to complete")
+            throw SchemaSimulatorException("could not update cart for user $userId to complete")
         }
 
         // Pull the product reservation from all inventories
         result = inventories.updateMany(Document(mapOf(
-            "reservations._id" to values.userId
+            "reservations._id" to userId
         )), Document(mapOf(
             "\$pull" to mapOf(
                 "reservations" to mapOf(
-                    "_id" to values.userId
+                    "_id" to userId
                 )
             )
         )))
@@ -125,22 +99,12 @@ class CheckoutCart(logEntry: LogEntry, private val carts: MongoCollection<Docume
                 "_id" to orderId
             )))
         }
-
-        return mapOf()
     }
-}
 
-class ExpireCarts(logEntry: LogEntry,
-                  private val carts: MongoCollection<Document>,
-                  private val inventories: MongoCollection<Document>) : Action(logEntry) {
-    override fun run(values: ActionValues): Map<String, Any> {
-        if (!(values is ReservationShoppingCartValues)) {
-            throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-        }
-
+    fun expireAllCarts(cutOffDate: Date) = log("expireAllCarts") {
         carts.find(Document(mapOf(
             "modifiedOn" to mapOf(
-                "\$lte" to values.cutOffDate
+                "\$lte" to cutOffDate
             ),
             "state" to "active"
         ))).forEach { cart ->
@@ -173,288 +137,157 @@ class ExpireCarts(logEntry: LogEntry,
                 )))
             }
         }
-
-        return mapOf()
-    }
-}
-
-class UpdateReservationQuantityForAProduct(logEntry: LogEntry,
-                                           private val carts: MongoCollection<Document>,
-                                           private val inventories: MongoCollection<Document>) : Action(logEntry) {
-    override fun run(values: ActionValues): Map<String, Any> {
-        if (!(values is ReservationShoppingCartValues)) {
-            throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-        }
-
-        // Update product quantity in cart
-        val result1 = UpdateProductQuantityInCartDocument(logEntry, carts).execute(values)
-        val mergedOptions = ReservationShoppingCartValues(
-            userId = values.userId, quantity = values.quantity, product = values.product,
-            delta = result1["delta"] as Int, newQuantity = result1["newQuantity"] as Int, oldQuantity = result1["oldQuantity"] as Int
-        )
-
-        try {
-            // Attempt to update inventory
-            UpdateInventoryQuantityInCartDocument(logEntry, inventories).execute(mergedOptions)
-        } catch (exception: SchemaSimulatorException) {
-            // Attempt to rollback
-            RolbackCartQuantity(logEntry, carts).execute(mergedOptions)
-        }
-
-        return mapOf()
     }
 
-    companion object {
-        class UpdateProductQuantityInCartDocument(logEntry: LogEntry,
-                                                  private val carts: MongoCollection<Document>) : Action(logEntry) {
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
+    fun updateProduct(userId: Any, quantity: Int, product: Document) = log("updateProduct")  {
+        // Unwrap needed values
+        var oldQuantity = 0
 
-                // Unwrap needed values
-                var oldQuantity = 0
-                val newQuantity = values.quantity
-                val document = values.product
+        // Get the cart
+        val cart = carts.find(Document(mapOf(
+            "_id" to userId,
+            "products._id" to product["_id"],
+            "state" to "active"
+        ))).first()
 
-                // Get the cart
-                val cart = carts.find(Document(mapOf(
-                    "_id" to values.userId,
-                    "products._id" to document["_id"],
-                    "state" to "active"
-                ))).first()
+        // Throw id no cart found
+        cart
+            ?: throw SchemaSimulatorException("cart for user $userId not found")
 
-                // Throw id no cart found
-                cart
-                    ?: throw SchemaSimulatorException("cart for user ${values.userId} not found in UpdateProductQuantityInCartDocument")
-
-                // Locate the product and get the old quantity
-                val products = cart.get("products") as List<Document>
-                products.forEach {
-                    if (it.get("_id") == document["_id"]) {
-                        oldQuantity = it.get("quantity") as Int
-                    }
-                }
-
-                // Calculate the delta
-                val delta = newQuantity - oldQuantity
-                // Update the cart with new size
-                val result = carts.updateOne(Document(mapOf(
-                    "_id" to values.userId,
-                    "products._id" to document["_id"],
-                    "state" to "active"
-                )), Document(mapOf(
-                    "\$set" to mapOf(
-                        "modifiedOn" to Date(),
-                        "products.$.quantity" to newQuantity
-                    )
-                )))
-
-                // Fail to modify the cart
-                if (result.modifiedCount == 0L) {
-                    throw SchemaSimulatorException("failed to modify cart for user ${values.userId}")
-                }
-
-                // Return the delta
-                return mapOf(
-                    "delta" to delta,
-                    "newQuantity" to newQuantity,
-                    "oldQuantity" to oldQuantity)
+        // Locate the product and get the old quantity
+        val products = cart["products"] as List<Document>
+        products.forEach {
+            if (it["_id"] == product["_id"]) {
+                oldQuantity = it["quantity"] as Int
             }
         }
 
-        class UpdateInventoryQuantityInCartDocument(logEntry: LogEntry,
-                                                    private val inventories: MongoCollection<Document>) : Action(logEntry) {
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
+        // Calculate the delta
+        val delta = quantity - oldQuantity
+        // Update the cart with new size
+        var result = carts.updateOne(Document(mapOf(
+            "_id" to userId,
+            "products._id" to product["_id"],
+            "state" to "active"
+        )), Document(mapOf(
+            "\$set" to mapOf(
+                "modifiedOn" to Date(),
+                "products.$.quantity" to quantity
+            )
+        )))
 
-                // Unwrap needed values
-                val document = values.product
-                val delta = values.delta
-                val newQuantity = values.newQuantity
-
-                // Update the cart with new size
-                val result = inventories.updateOne(Document(mapOf(
-                    "_id" to document["_id"],
-                    "reservations._id" to values.userId,
-                    "quantity" to mapOf(
-                        "\$gte" to delta
-                    )
-                )), Document(mapOf(
-                    "\$inc" to mapOf(
-                        "quantity" to delta.unaryMinus()
-                    ),
-                    "\$set" to mapOf(
-                        "reservations.$.quantity" to newQuantity,
-                        "modifiedOn" to Date()
-                    )
-                )))
-
-                if (result.modifiedCount == 0L) {
-                    throw SchemaSimulatorException("Failed to reserve product ${document["_id"]} quantity $newQuantity for user ${values.userId}")
-                }
-
-                return mapOf()
-            }
+        // Fail to modify the cart
+        if (result.modifiedCount == 0L) {
+            throw SchemaSimulatorException("failed to modify cart for user $userId")
         }
 
-        class RolbackCartQuantity(logEntry: LogEntry,
-                                  private val carts: MongoCollection<Document>) : Action(logEntry) {
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
+        //
+        // Update the inventory entries
+        //
 
-                // Unwrap needed values
-                val document = values.product
-                val oldQuantity = values.oldQuantity
+        // Update the cart with new size
+        result = inventories.updateOne(Document(mapOf(
+            "_id" to product["_id"],
+            "reservations._id" to userId,
+            "quantity" to mapOf(
+                "\$gte" to delta
+            )
+        )), Document(mapOf(
+            "\$inc" to mapOf(
+                "quantity" to delta.unaryMinus()
+            ),
+            "\$set" to mapOf(
+                "reservations.$.quantity" to quantity,
+                "modifiedOn" to Date()
+            )
+        )))
 
-                // Update the cart with new size
-                val result = carts.updateOne(Document(mapOf(
-                    "_id" to values.userId,
-                    "products._id" to document["_id"],
-                    "state" to "active"
-                )), Document(mapOf(
-                    "\$set" to mapOf(
-                        "products.\$.quantity" to oldQuantity,
-                        "modifiedOn" to Date()
-                    )
-                )))
+        if (result.modifiedCount == 0L) {
+            // Update the cart with new size
+            result = carts.updateOne(Document(mapOf(
+                "_id" to userId,
+                "products._id" to product["_id"],
+                "state" to "active"
+            )), Document(mapOf(
+                "\$set" to mapOf(
+                    "products.\$.quantity" to oldQuantity,
+                    "modifiedOn" to Date()
+                )
+            )))
 
-                if (result.modifiedCount == 0L) {
-                    throw SchemaSimulatorException("Failed to rollback product ${document["_id"]} quantity $oldQuantity for user ${values.userId}")
-                }
-
-                return mapOf()
+            if (result.modifiedCount == 0L) {
+                throw SchemaSimulatorException("Failed to rollback product ${product["_id"]} quantity $oldQuantity for user ${userId}")
             }
         }
     }
-}
 
+    fun addProduct(userId: Any, quantity: Int, product: Document) = log("addProduct")  {
+        // Execute cart update
+        var result = carts.updateOne(Document(mapOf(
+            "_id" to userId,
+            "state" to "active"
+        )), Document(mapOf(
+            "\$set" to mapOf("modifiedOn" to Date()),
+            "\$push" to mapOf(
+                "products" to mapOf(
+                    "_id" to product["_id"],
+                    "quantity" to quantity,
+                    "name" to product["name"],
+                    "price" to product["price"]
+                )
+            )
+        )), UpdateOptions().upsert(true))
 
-class AddProductToShoppingCart(logEntry: LogEntry,
-                               private val carts: MongoCollection<Document>,
-                               private val inventories: MongoCollection<Document>) : Action(logEntry) {
+        // If we correctly inserted
+        if (result.upsertedId != null || result.modifiedCount == 1L) {
+            // Execute the inventory update
+            result = inventories.updateOne(Document(mapOf(
+                "_id" to product["_id"],
+                "quantity" to mapOf("\$gte" to quantity)
+            )), Document(mapOf(
+                "\$set" to mapOf("modifiedOn" to Date()),
+                "\$inc" to mapOf("quantity" to quantity.unaryMinus()),
+                "\$push" to mapOf(
+                    "reservations" to mapOf(
+                        "_id" to userId,
+                        "quantity" to quantity,
+                        "createdOn" to Date()
+                    )
+                ))), UpdateOptions().upsert(false))
 
-    override fun run(values: ActionValues): Map<String, Any> {
-        if (!(values is ReservationShoppingCartValues)) {
-            throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-        }
-
-        // Attempt to Add product to shopping cart, nothing to do if it fails
-        AddProductToShoppingCartDocument(logEntry, carts).execute(values)
-        // Attempt to update the inventory
-        try {
-            ReserveProductToInventoryDocument(logEntry, inventories).execute(values)
-        } catch (exception: SchemaSimulatorException) {
-            // We have to roll back the shopping cart
-            RollBackShoppingCartDocument(logEntry, carts).execute(values)
-        }
-
-        return mapOf()
-    }
-
-    companion object {
-        class RollBackShoppingCartDocument(logEntry: LogEntry,
-            private val carts: MongoCollection<Document>) : Action(logEntry) {
-
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
-
-                // Unwrap needed values
-                val document = values.product
-
+            // Failed to update, rollback
+            if (result.modifiedCount == 0L) {
                 // Execute cart update
-                val result = carts.updateOne(Document(mapOf(
-                    "_id" to values.userId
+                result = carts.updateOne(Document(mapOf(
+                    "_id" to userId
                 )), Document(mapOf(
                     "\$set" to mapOf("modifiedOn" to Date()),
                     "\$pull" to mapOf(
                         "products" to mapOf(
-                            "_id" to document["productId"]
+                            "_id" to product["productId"]
                         )
                     ))))
 
-                if (result.modifiedCount == 1L) {
-                    return mapOf()
+                if (result.modifiedCount == 0L) {
+                    throw SchemaSimulatorException("Failed to rollback shopping cart")
+                } else {
+                    throw SchemaSimulatorException("Failed to update the product inventory")
                 }
-
-                throw SchemaSimulatorException("Failed to rollback shopping cart")
             }
-        }
-
-        class AddProductToShoppingCartDocument(logEntry: LogEntry,
-            private val carts: MongoCollection<Document>) : Action(logEntry) {
-
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
-
-                // Unwrap needed values
-                val document = values.product
-
-                // Execute cart update
-                val result = carts.updateOne(Document(mapOf(
-                    "_id" to values.userId,
-                    "state" to "active"
-                )), Document(mapOf(
-                    "\$set" to mapOf("modifiedOn" to Date()),
-                    "\$push" to mapOf(
-                        "products" to mapOf(
-                            "_id" to document["_id"],
-                            "quantity" to values.quantity,
-                            "name" to document["name"],
-                            "price" to document["price"]
-                        )
-                    )
-                )), UpdateOptions().upsert(true))
-
-                if (result.upsertedId != null || result.modifiedCount == 1L) {
-                    return mapOf()
-                }
-
-                throw SchemaSimulatorException("Failed to upsert to update the shopping cart")
-            }
-        }
-
-        class ReserveProductToInventoryDocument(logEntry: LogEntry,
-            private val inventories: MongoCollection<Document>) : Action(logEntry) {
-
-            override fun run(values: ActionValues): Map<String, Any> {
-                if (!(values is ReservationShoppingCartValues)) {
-                    throw SchemaSimulatorException("values passed to action must be of type ReservationShoppingCartValues")
-                }
-
-                // Unwrap needed values
-                val document = values.product
-                val quantity = values.quantity
-
-                // Execute the inventory update
-                val result = inventories.updateOne(Document(mapOf(
-                    "_id" to document["_id"],
-                    "quantity" to mapOf("\$gte" to quantity)
-                )), Document(mapOf(
-                    "\$set" to mapOf("modifiedOn" to Date()),
-                    "\$inc" to mapOf("quantity" to quantity.unaryMinus()),
-                    "\$push" to mapOf(
-                        "reservations" to mapOf(
-                            "_id" to values.userId,
-                            "quantity" to quantity,
-                            "createdOn" to Date()
-                        )
-                    ))), UpdateOptions().upsert(false))
-
-                if (result.modifiedCount == 1L) {
-                    return mapOf()
-                }
-
-                throw SchemaSimulatorException("Failed to update the product inventory")
-            }
+        } else {
+            throw SchemaSimulatorException("Failed to upsert to update the shopping cart")
         }
     }
+
+    override fun indexes(): List<Index> = listOf(
+        Index(inventories.namespace.databaseName, inventories.namespace.collectionName,
+            Indexes.ascending("reservations._id")
+        ),
+        Index(carts.namespace.databaseName, carts.namespace.collectionName,
+            Indexes.ascending("modifiedOn")
+        ),
+        Index(carts.namespace.databaseName, carts.namespace.collectionName,
+            Indexes.ascending("state")
+        )
+    )
 }

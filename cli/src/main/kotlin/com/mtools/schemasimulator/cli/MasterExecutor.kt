@@ -26,7 +26,9 @@ import java.net.InetSocketAddress
 import java.net.URI
 import java.util.*
 import java.util.concurrent.LinkedBlockingDeque
+import javax.script.ScriptContext
 import javax.script.ScriptEngineManager
+import javax.script.SimpleScriptContext
 
 data class MasterExecutorConfig (
     val master: Boolean,
@@ -180,8 +182,9 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         val engine = ScriptEngineManager().getEngineByExtension("kts")!!
         // Read the string
         val configFileString = config.config
+
         // Load the file
-        val result = engine.eval(configFileString)
+        val result = engine.eval(configFileString, SimpleScriptContext())
 
         // Ensure the type is of Config
         if (!(result is Config)) {

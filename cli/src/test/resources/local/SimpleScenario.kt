@@ -1,21 +1,21 @@
+package local
+
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.cli.config.Config
 import com.mtools.schemasimulator.executor.Simulation
 import com.mtools.schemasimulator.executor.SimulationOptions
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGenerator
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGeneratorOptions
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartIndexes
 import org.bson.Document
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotNull
 import com.mtools.schemasimulator.cli.config.config
+import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCart
 
-class SimpleSimulation(seedUserId: Int = 1,
+class ReservationCartSimulation(seedUserId: Int = 1,
                        private val numberOfDocuments: Int = 5) : Simulation(SimulationOptions(iterations = 10)) {
     override fun init(client: MongoClient) {
         this.client = client
@@ -53,7 +53,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         ))
 
         // Generate all the indexes
-        createIndexes(ShoppingCartIndexes(carts, inventories, orders))
+        createIndexes(ShoppingCart(LogEntry(""), carts, inventories, orders))
     }
 
     override fun before() {
@@ -69,24 +69,25 @@ class SimpleSimulation(seedUserId: Int = 1,
 
         // Get current userId
         val currentUserId = userId.incrementAndGet()
+        val cart = ShoppingCart(logEntry, carts, inventories, orders)
 
         // Add product to shopping cart
-        AddProductToShoppingCart(logEntry, carts, inventories).execute(ReservationShoppingCartValues(
+        cart.addProduct(
             userId = currentUserId,
             quantity = Math.round(Math.random() * 5).toInt(),
             product = product
-        ))
+        )
 
         // Checkout
-        CheckoutCart(logEntry, carts, inventories, orders).execute(ReservationShoppingCartValues(
+        cart.checkout(
             userId = currentUserId,
             name = "Some random name",
-            address = "Aome random address",
+            address = "Acme random address",
             payment = Document(mapOf(
                 "method" to "visa",
                 "transaction_id" to Math.round(Math.random() * Long.MAX_VALUE).toString()
             ))
-        ))
+        )
     }
 
     override fun after() {
@@ -95,37 +96,41 @@ class SimpleSimulation(seedUserId: Int = 1,
     override fun afterAll() {
     }
 }
-tickResolutionMilliseconds
-config {
-    mongodb {
-        url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
-        db("integration_tests")
-    }
 
-    // Master level coordinator
-    coordinator {
-        // Each Master tick is every 1 millisecond
-        tickResolutionMilliseconds(1)
-        // Run for 1000 ticks or in this case 1000 simulated milliseconds
-        runForNumberOfTicks(1000)
+fun simulation() : Config {
+    return config {
+        mongodb {
+            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+            db("integration_tests")
+        }
 
-        // Local running worker thread
-        local {
-            name("local1")
+        // Master level coordinator
+        coordinator {
+            // Each Master tick is every 1 millisecond
+            tickResolutionMilliseconds(1)
+            // Run for 1000 ticks or in this case 1000 simulated milliseconds
+            runForNumberOfTicks(1000)
 
-            // Constant Load Pattern
-            constant {
-                // Each tick produces two concurrently
-                // executed instances of the simulation
-                numberOfCExecutions(2)
-                // Execute every 100 milliseconds
-                executeEveryMilliseconds(100)
+            // Local running worker thread
+            local {
+                name("local1")
+
+                // Constant Load Pattern
+                constant {
+                    // Each tick produces two concurrently
+                    // executed instances of the simulation
+                    numberOfCExecutions(2)
+                    // Execute every 100 milliseconds
+                    executeEveryMilliseconds(100)
+                }
+
+                // Simulation
+                simulation(
+                    ReservationCartSimulation(seedUserId = 1, numberOfDocuments = 10)
+                )
             }
-
-            // Simulation
-            simulation(
-                SimpleSimulation(seedUserId = 1, numberOfDocuments = 10)
-            )
         }
     }
 }
+
+simulation()

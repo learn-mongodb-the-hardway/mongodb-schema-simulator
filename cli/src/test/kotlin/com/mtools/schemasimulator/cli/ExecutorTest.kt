@@ -25,7 +25,7 @@ class ExecutorTest {
         val masterExecutor = MasterExecutor(MasterExecutorConfig(
             true,
             URI.create("http://127.0.0.1:14500"),
-            InputStreamReader(ClassLoader.getSystemResourceAsStream("SimpleRemoteScenario.kt")).readText()
+            InputStreamReader(ClassLoader.getSystemResourceAsStream("remote/SimpleRemoteScenario.kt")).readText()
         ))
 
         // Setup two worker Executors

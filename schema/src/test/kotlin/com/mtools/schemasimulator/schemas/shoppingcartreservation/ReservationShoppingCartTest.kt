@@ -21,7 +21,7 @@ class ReservationShoppingCartTest {
     fun successfulAddProductToShoppingCartTest() {
         val userId = 1
         // Attempt to create a shopping cart
-        val action = AddProductToShoppingCart(LogEntry(""), carts, inventories)
+        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
         ))).first()
@@ -32,9 +32,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Fire the action
-        action.execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
+        cart.addProduct(userId, 1, product)
 
         // Get the generated documents
         val cartR = carts
@@ -67,6 +65,7 @@ class ReservationShoppingCartTest {
     @Test
     fun successfulUpdateReservationQuantityForAProductTest() {
         val userId = 2
+        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 3)
@@ -78,14 +77,8 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
-
-        // Update the cart
-        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 2, product = product
-        ))
+        cart.addProduct(userId, 1, product)
+        cart.updateProduct(userId, 2, product)
 
         // Get the generated documents
         val cartR = carts
@@ -118,6 +111,7 @@ class ReservationShoppingCartTest {
     @Test
     fun failUpdateReservationQuantityForAProductDueToLimitedStockTest() {
         val userId = 3
+        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
@@ -129,9 +123,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
+        cart.addProduct(userId, 1, product)
 
         // Get the generated documents
         val preCartR = carts
@@ -142,9 +134,7 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Update the cart
-        UpdateReservationQuantityForAProduct(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = Int.MAX_VALUE, product = product
-        ))
+        cart.updateProduct(userId, Int.MAX_VALUE, product)
 
         // Get the generated documents
         val cartR = carts
@@ -177,6 +167,7 @@ class ReservationShoppingCartTest {
     @Test
     fun expireCarts() {
         val userId = 4
+        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
@@ -188,15 +179,11 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
+        cart.addProduct(userId, 1, product)
 
         // Force the expireAllCarts by setting a cutOff date that is expired
         val date = Date(Date().time + 20000000)
-        ExpireCarts(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            cutOffDate = date
-        ))
+        cart.expireAllCarts(date)
 
         val cartR = carts
             .find(Document(mapOf("_id" to userId))).first()
@@ -227,6 +214,7 @@ class ReservationShoppingCartTest {
     @Test
     fun checkoutCart() {
         val userId = 5
+        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
@@ -238,9 +226,7 @@ class ReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        AddProductToShoppingCart(LogEntry(""), carts, inventories).execute(ReservationShoppingCartValues(
-            userId = userId, quantity = 1, product = product
-        ))
+        cart.addProduct(userId, 1, product)
 
         // Get the generated documents
         val preCartR = carts
@@ -251,7 +237,7 @@ class ReservationShoppingCartTest {
         assertNotNull(preInventoryR)
 
         // Checkout
-        CheckoutCart(LogEntry(""), carts, inventories, orders).execute(ReservationShoppingCartValues(
+        cart.checkout(
             userId = userId,
             name = "Peter",
             address = "Peter street 1",
@@ -259,7 +245,7 @@ class ReservationShoppingCartTest {
                 "method" to "visa",
                 "transaction_id" to "1"
             ))
-        ))
+        )
 
         val cartR = carts
             .find(Document(mapOf("_id" to userId))).first()

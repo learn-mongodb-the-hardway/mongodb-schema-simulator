@@ -6,9 +6,10 @@ import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.executor.Simulation
 import com.mtools.schemasimulator.executor.SimulationOptions
 import com.mtools.schemasimulator.logger.LogEntry
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
-import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
+import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCart
+//import com.mtools.schemasimulator.schemas.shoppingcartreservation.AddProductToShoppingCart
+//import com.mtools.schemasimulator.schemas.shoppingcartreservation.CheckoutCart
+//import com.mtools.schemasimulator.schemas.shoppingcartreservation.ReservationShoppingCartValues
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGenerator
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.ShoppingCartDataGeneratorOptions
 import org.bson.Document
@@ -66,16 +67,17 @@ class SimpleSimulation(seedUserId: Int = 1,
 
         // Get current userId
         val currentUserId = userId.incrementAndGet()
+        val cart = ShoppingCart(logEntry, carts, inventories, orders)
 
         // Add product to shopping cart
-        AddProductToShoppingCart(logEntry, carts, inventories).execute(ReservationShoppingCartValues(
+        cart.addProduct(
             userId = currentUserId,
             quantity = Math.round(Math.random() * 5).toInt(),
             product = product
-        ))
+        )
 
         // Checkout
-        CheckoutCart(logEntry, carts, inventories, orders).execute(ReservationShoppingCartValues(
+        cart.checkout(
             userId = currentUserId,
             name = "Some random name",
             address = "Aome random address",
@@ -83,7 +85,7 @@ class SimpleSimulation(seedUserId: Int = 1,
                 "method" to "visa",
                 "transaction_id" to Math.round(Math.random() * Long.MAX_VALUE).toString()
             ))
-        ))
+        )
     }
 
     override fun after() {
