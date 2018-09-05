@@ -1,6 +1,5 @@
 package com.mtools.schemasimulator.schemas.theater
 
-import com.beust.klaxon.Klaxon
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Indexes
 import com.mtools.schemasimulator.logger.LogEntry
@@ -184,23 +183,3 @@ class Cart (
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
