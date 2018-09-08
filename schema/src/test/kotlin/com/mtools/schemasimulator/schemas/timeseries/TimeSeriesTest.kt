@@ -12,7 +12,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -26,8 +25,7 @@ class TimeSeriesTest {
         val timeSeries = TimeSeries(
             LogEntry(""), timeseries, ObjectId(),
             mutableListOf(), timestamp, "device1",
-            TimeResolution.MINUTE)
-        timeSeries.create()
+            TimeResolution.MINUTE).create()
 
         // Increment the counter
         for (i in 0 until 60 step 1) {
@@ -47,6 +45,31 @@ class TimeSeriesTest {
         }
     }
 
+    @Test
+    @DisplayName("Correctly create and execute ten increments on a timeseries object that is pre allocated for minute")
+    fun test2() {
+        val timestamp = DateTime(2018, 10, 1, 1, 0, 0).toDate()
+        // Create a new timeseries instance
+        val timeSeries = TimeSeries.preAllocateMinute(
+            LogEntry(""), timeseries, ObjectId(),
+            "device1", timestamp).create()
+
+        // Increment a single field
+        timeSeries.inc(
+            DateTime(2018, 10, 1, 1, 0, 1).toDate(),
+            1.0)
+
+        // Grab the document
+        val doc = timeseries.find(Document(mapOf(
+            "_id" to timeSeries.id
+        ))).firstOrNull()
+        assertNotNull(doc)
+
+        val series = doc?.get("series") as List<Double>
+        assertEquals(1.0, series[1])
+        assertEquals(0.0, series[0])
+    }
+
     companion object {
         lateinit var client: MongoClient
         lateinit var db: MongoDatabase
@@ -61,11 +84,6 @@ class TimeSeriesTest {
 
             // Drop collection
             timeseries.drop()
-
-//            // Generate some test data
-//            ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
-//                5, 100
-//            ))
         }
 
         @AfterAll

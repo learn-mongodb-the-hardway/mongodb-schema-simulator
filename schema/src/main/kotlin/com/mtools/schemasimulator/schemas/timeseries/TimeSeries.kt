@@ -39,7 +39,7 @@ class TimeSeries(
     /*
      * Create a new timeseries bucket document on mongodb
      */
-    fun create() {
+    fun create() : TimeSeries {
         timeseries.insertOne(Document(mapOf(
             "_id" to id,
             "tag" to tag,
@@ -47,6 +47,8 @@ class TimeSeries(
             "timestamp" to timestamp,
             "modifiedOn" to Date()
         )))
+
+        return this
     }
 
     /*
@@ -99,57 +101,65 @@ class TimeSeries(
         }
     }
 
-    /*
-     * Pre allocate an hour worth of measurements in a document
-     */
-    fun preAllocateMinute(id: Any, tag: String, timestamp: Date) : TimeSeries {
-        val series = mutableListOf<Any>()
-
-        for (i in 0 until 60 step 1) {
-            series.add(i, 0)
-        }
-
-        return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
-    }
-
-    /*
-     * Pre allocate an hour worth of measurements in a document
-     */
-    fun preAllocateHour(id: Any, tag: String, timestamp: Date) : TimeSeries {
-        val series = mutableListOf<Any>()
-
-        for (j in 0 until 60 step 1) {
-            val doc = Document()
-            series.add(j, doc)
+    companion object {
+        /*
+         * Pre allocate an hour worth of measurements in a document
+         */
+        fun preAllocateMinute(logEntry: LogEntry,
+                              timeseries: MongoCollection<Document>,
+                              id: Any, tag: String, timestamp: Date) : TimeSeries {
+            val series = mutableListOf<Any>()
 
             for (i in 0 until 60 step 1) {
-                doc["$i"] = 0
+                series.add(i, 0.0)
             }
+
+            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
         }
 
-        return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
-    }
+        /*
+         * Pre allocate an hour worth of measurements in a document
+         */
+        fun preAllocateHour(logEntry: LogEntry,
+                            timeseries: MongoCollection<Document>,
+                            id: Any, tag: String, timestamp: Date) : TimeSeries {
+            val series = mutableListOf<Any>()
 
-    /*
-     * Pre allocate an hour worth of measurements in a document
-     */
-    fun preAllocateDay(id: Any, tag: String, timestamp: Date) : TimeSeries {
-        val series = mutableListOf<Any>()
+            for (j in 0 until 60 step 1) {
+                val doc = Document()
+                series.add(j, doc)
 
-        for (j in 0 until 60 step 1) {
-            val doc = mutableListOf<Any>()
-            series.add(j, doc)
-
-            for (i in 0 until 60 step 1) {
-                val doc1 = mutableListOf<Any>()
-                doc.add(i, doc1)
-
-                for (k in 0 until 60 step 1) {
-                    doc1.add(k, 0)
+                for (i in 0 until 60 step 1) {
+                    doc["$i"] = 0.0
                 }
             }
+
+            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
         }
 
-        return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
+        /*
+         * Pre allocate an hour worth of measurements in a document
+         */
+        fun preAllocateDay(logEntry: LogEntry,
+                           timeseries: MongoCollection<Document>,
+                           id: Any, tag: String, timestamp: Date) : TimeSeries {
+            val series = mutableListOf<Any>()
+
+            for (j in 0 until 60 step 1) {
+                val doc = mutableListOf<Any>()
+                series.add(j, doc)
+
+                for (i in 0 until 60 step 1) {
+                    val doc1 = mutableListOf<Any>()
+                    doc.add(i, doc1)
+
+                    for (k in 0 until 60 step 1) {
+                        doc1.add(k, 0.0)
+                    }
+                }
+            }
+
+            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
+        }
     }
 }
