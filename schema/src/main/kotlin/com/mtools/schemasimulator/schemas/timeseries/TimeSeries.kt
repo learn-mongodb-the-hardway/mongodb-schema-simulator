@@ -8,6 +8,7 @@ import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
+import org.joda.time.DateTime
 import java.util.*
 
 enum class TimeResolution {
@@ -41,7 +42,7 @@ class TimeSeries(
     fun create() {
         timeseries.insertOne(Document(mapOf(
             "_id" to id,
-            "_tag" to tag,
+            "tag" to tag,
             "series" to series,
             "timestamp" to timestamp,
             "modifiedOn" to Date()
@@ -57,12 +58,15 @@ class TimeSeries(
             "\$setOnInsert" to mapOf(
                 "tag" to tag,
                 "timestamp" to timestamp,
-                "resolution" to resolution
+                "resolution" to resolution.toString()
             ),
             "\$set" to mapOf(
                 "modifiedOn" to Date()
             )
         ))
+
+        // Create JodaTime object
+        val dateTime = DateTime(time)
 
         // Inc document
         val incDocument = updateStatement["\$inc"] as Document
@@ -70,15 +74,18 @@ class TimeSeries(
         // Handle the resolution
         when (resolution) {
             TimeResolution.MINUTE -> {
-                incDocument["series.${time.seconds}"]
+                incDocument["series.${dateTime.secondOfMinute}"] = measurement
             }
             TimeResolution.HOUR -> {
-                incDocument["series.${time.minutes}.${time.seconds}"]
+                incDocument["series.${dateTime.minuteOfHour}.${dateTime.secondOfMinute}"] = measurement
             }
             TimeResolution.DAY -> {
-                incDocument["series.${time.hours}.${time.minutes}.${time.seconds}"]
+                incDocument["series.${dateTime.hourOfDay}.${dateTime.minuteOfHour}.${dateTime.secondOfMinute}"] = measurement
             }
         }
+
+        // Set the inc document
+        updateStatement["\$inc"] = incDocument
 
         // Execute the update
         val result =timeseries.updateOne(Document(mapOf(

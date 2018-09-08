@@ -1,7 +1,7 @@
 package com.mtools.schemasimulator.clients
 
 import com.beust.klaxon.Klaxon
-import com.xenomachina.argparser.SystemExitException
+import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import mu.KLogging
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
@@ -40,7 +40,7 @@ class WebSocketConnectionClient(
 
             // No more attempts left, throw an error
             if (currentReconnectAttempts == 0) {
-                throw SystemExitException("Attempted to connect to [${uri.host}:${uri.port}] $maxReconnectAttempts times but failed", 2)
+                throw SchemaSimulatorException("Attempted to connect to [${uri.host}:${uri.port}] $maxReconnectAttempts times but failed", 2)
             }
 
             // We are connected already skip

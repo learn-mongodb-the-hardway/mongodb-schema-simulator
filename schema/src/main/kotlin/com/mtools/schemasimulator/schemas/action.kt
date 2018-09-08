@@ -36,4 +36,4 @@ data class Index(val db: String, val collection: String, val keys: Bson, val opt
 //    }
 //}
 
-class SchemaSimulatorException(message: String): Exception(message)
+class SchemaSimulatorException(message: String, val code: Int = 0, ex: Exception? = null): Exception(message, ex)

@@ -4,6 +4,8 @@ ext {
 
 dependencies {
     compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion"
+    // https://mvnrepository.com/artifact/joda-time/joda-time
+    compile group: 'joda-time', name: 'joda-time', version: '2.10'
 }
 
 //implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.0'
