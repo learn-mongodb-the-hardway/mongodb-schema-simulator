@@ -126,15 +126,15 @@ class TimeSeries(
             val series = mutableListOf<Any>()
 
             for (j in 0 until 60 step 1) {
-                val doc = Document()
+                val doc = mutableListOf<Double>()
                 series.add(j, doc)
 
                 for (i in 0 until 60 step 1) {
-                    doc["$i"] = 0.0
+                    doc.add(0.0)
                 }
             }
 
-            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
+            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.HOUR)
         }
 
         /*
@@ -159,7 +159,7 @@ class TimeSeries(
                 }
             }
 
-            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.MINUTE)
+            return TimeSeries(logEntry, timeseries, id, series, timestamp, tag, TimeResolution.DAY)
         }
     }
 }

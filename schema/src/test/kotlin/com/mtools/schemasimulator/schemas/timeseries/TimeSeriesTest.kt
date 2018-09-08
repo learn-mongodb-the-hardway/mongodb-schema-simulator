@@ -70,6 +70,56 @@ class TimeSeriesTest {
         assertEquals(0.0, series[0])
     }
 
+    @Test
+    @DisplayName("Correctly create and execute ten increments on a timeseries object that is pre allocated for hour")
+    fun test3() {
+        val timestamp = DateTime(2018, 10, 1, 0, 0, 0).toDate()
+        // Create a new timeseries instance
+        val timeSeries = TimeSeries.preAllocateHour(
+            LogEntry(""), timeseries, ObjectId(),
+            "device1", timestamp).create()
+
+        // Increment a single field
+        timeSeries.inc(
+            DateTime(2018, 10, 1, 0, 0, 1).toDate(),
+            1.0)
+
+        // Grab the document
+        val doc = timeseries.find(Document(mapOf(
+            "_id" to timeSeries.id
+        ))).firstOrNull()
+        assertNotNull(doc)
+
+        val series = doc?.get("series") as List<List<Double>>
+        assertEquals(1.0, series[0][1])
+        assertEquals(0.0, series[0][0])
+    }
+
+    @Test
+    @DisplayName("Correctly create and execute ten increments on a timeseries object that is pre allocated for day")
+    fun test4() {
+        val timestamp = DateTime(2018, 10, 1, 0, 0, 0).toDate()
+        // Create a new timeseries instance
+        val timeSeries = TimeSeries.preAllocateDay(
+            LogEntry(""), timeseries, ObjectId(),
+            "device1", timestamp).create()
+
+        // Increment a single field
+        timeSeries.inc(
+            DateTime(2018, 10, 1, 0, 0, 1).toDate(),
+            1.0)
+
+        // Grab the document
+        val doc = timeseries.find(Document(mapOf(
+            "_id" to timeSeries.id
+        ))).firstOrNull()
+        assertNotNull(doc)
+
+        val series = doc?.get("series") as List<List<List<Double>>>
+        assertEquals(1.0, series[0][0][1])
+        assertEquals(0.0, series[0][0][0])
+    }
+
     companion object {
         lateinit var client: MongoClient
         lateinit var db: MongoDatabase
