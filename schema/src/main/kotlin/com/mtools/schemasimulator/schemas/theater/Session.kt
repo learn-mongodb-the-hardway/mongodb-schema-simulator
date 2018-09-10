@@ -17,7 +17,7 @@ class Session (
     private val sessions: MongoCollection<Document>,
     private val theaters: MongoCollection<Document>,
     val id: Any,
-    val theaterId: ObjectId? = null,
+    val theaterId: Any? = null,
     val name: String? = null,
     val description: String? = null,
     val start: Date? = null,
@@ -30,6 +30,9 @@ class Session (
         )
     )
 
+    lateinit var seats: List<List<Int>>
+    var seatsAvailable: Int = 0
+
     /*
      *  Create a new session instance and save the document in mongodb
      */
@@ -39,6 +42,10 @@ class Session (
         ))).firstOrNull()
 
         doc ?: throw SchemaSimulatorException("no theater instance found for id $theaterId")
+
+        // Set current values
+        seatsAvailable = doc.getInteger("seatsAvailable")
+        seats = doc["seats"] as List<List<Int>>
 
         // Create a session for this theater
         sessions.insertOne(Document(mapOf(
@@ -77,7 +84,7 @@ class Session (
 
         // Attempt to reserve the seats
         val result = sessions.updateOne(Document(mapOf(
-            "_id" to id,
+            "_id" to this.id,
             "theaterId" to theaterId,
             "\$and" to seatsQuery
         )), Document(mapOf(
@@ -104,38 +111,38 @@ class Session (
     /*
      * Release all the reservations for a cart across all sessions
      */
-    fun releaseAll(id: Any) {
+    fun releaseAll(cartId: Any) {
         val docs = sessions.find(Document(mapOf(
-            "reservations._id" to id
+            "reservations._id" to cartId
         ))).toList()
 
         if (docs.isEmpty()) return
 
         // Reverses a specific reservation
-        fun reverseReservation(doc: Document, id: Any) {
+        fun reverseReservation(doc: Document, cartId: Any) {
             // Locate the right cart id
             val reservations = doc["reservations"] as List<Document>
             val reservation = reservations.firstOrNull {
-                it["_id"] == id
+                it["_id"] == cartId
             }
 
             // No reservation found return
             reservation ?: return
             // Reverse the specific reservation
-            Session(logEntry, sessions, theaters, id).release(reservation["_id"]!!, reservation["seats"] as List<List<Int>>)
+            Session(logEntry, sessions, theaters, doc["_id"]!!).release(reservation["_id"]!!, reservation["seats"] as List<List<Int>>)
         }
 
         // Process all the entries
+        // For each entry reverse the reservation for this cart
         docs.forEach {
-            // For each entry reverse the reservation for this cart
-            reverseReservation(it, id)
+            reverseReservation(it, cartId)
         }
     }
 
     /*
      * Release a specific reservation and clear seats
      */
-    fun release(id: Any, seats: List<List<Int>>) {
+    fun release(cartId: Any, seats: List<List<Int>>) {
         val setSeatsSelection = Document()
 
         // Release all the seats
@@ -145,15 +152,23 @@ class Session (
 
         // Remove the reservation
         val result = sessions.updateOne(Document(mapOf(
-            "_id" to id
+            "_id" to this.id
         )), Document(mapOf(
             "\$set" to setSeatsSelection,
             "\$pull" to mapOf(
                 "reservations" to mapOf(
-                    "_id" to id
+                    "_id" to cartId
                 )
+            ),
+            "\$inc" to mapOf(
+                "seatsAvailable" to seats.size
             )
         )))
+
+        if (result.isModifiedCountAvailable
+            && result.modifiedCount == 0L) {
+            throw Exception("Failed to release the seats ${Klaxon().toJsonString(seats)} for session ${this.id}")
+        }
     }
 
     /*
@@ -169,6 +184,17 @@ class Session (
                 )
             )
         )))
+    }
+
+    fun reload() {
+        val doc = sessions.find(Document(mapOf(
+            "_id" to id
+        ))).firstOrNull()
+
+        doc ?: throw Exception("session with id $id not found")
+
+        seatsAvailable = doc.getInteger("seatsAvailable")
+        seats = doc["seats"] as List<List<Int>>
     }
 }
 

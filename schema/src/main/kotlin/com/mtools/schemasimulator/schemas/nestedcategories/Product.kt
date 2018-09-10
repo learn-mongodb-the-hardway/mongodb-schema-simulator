@@ -9,6 +9,7 @@ import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
+import org.bson.types.Decimal128
 import org.bson.types.ObjectId
 import java.math.BigDecimal
 
@@ -23,7 +24,7 @@ class Product(
     var name: String = "",
     var cost: BigDecimal = BigDecimal.ZERO,
     var currency: String = "",
-    var categories: Document = Document()
+    var categories: List<String> = listOf()
 ) : Scenario(logEntry), AcceptsReadPreference {
     private var readPreference: ReadPreference = ReadPreference.primary()
 
@@ -63,7 +64,7 @@ class Product(
         name = category.getString("name")
         cost = category["cost"] as BigDecimal
         currency = category.getString("currency")
-        categories = category["categories"] as Document
+        categories = category["categories"] as List<String>
     }
 
     /*
@@ -84,9 +85,9 @@ class Product(
                         categoriesCollection,
                         it["_id"]!!,
                         it.getString("name"),
-                        it["cost"]!! as BigDecimal,
+                        (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
-                        it["categories"] as Document
+                        it["categories"] as List<String>
                     )
                 }
                 .toList()
@@ -122,9 +123,9 @@ class Product(
                         categoriesCollection,
                         it["_id"]!!,
                         it.getString("name"),
-                        it["cost"] as BigDecimal,
+                        (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
-                        it["categories"] as Document
+                        it["categories"] as List<String>
                     )
                 }
                 .toList()
@@ -160,9 +161,9 @@ class Product(
                         categoriesCollection,
                         it["_id"]!!,
                         it.getString("name"),
-                        it["cost"] as BigDecimal,
+                        (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
-                        it["categories"] as Document
+                        it["categories"] as List<String>
                     )
                 }
                 .toList()

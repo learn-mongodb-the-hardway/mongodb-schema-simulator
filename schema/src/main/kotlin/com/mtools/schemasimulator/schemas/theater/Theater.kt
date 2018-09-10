@@ -13,7 +13,7 @@ class Theater (
     logEntry: LogEntry,
     private val theaters: MongoCollection<Document>,
     private val sessions: MongoCollection<Document>,
-    val id: ObjectId,
+    val id: Any,
     val name: String,
     val seats: List<List<Int>>
 ) : Scenario(logEntry) {

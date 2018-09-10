@@ -39,6 +39,7 @@ class Topic (
         db.createCollection(
             topics.namespace.collectionName,
             CreateCollectionOptions()
+                .capped(true)
                 .sizeInBytes(sizeInBytes)
                 .maxDocuments(maxDocuments)
         )

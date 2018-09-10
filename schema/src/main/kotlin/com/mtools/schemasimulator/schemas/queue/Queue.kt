@@ -74,7 +74,7 @@ class Queue (
         )))
     }
 
-    fun fetchByPriority(sort: Document?) : Job {
+    fun fetchByPriority() : Job {
         // Set sort option
         val sortOrder = Document(mapOf(
             "priority" to -1,

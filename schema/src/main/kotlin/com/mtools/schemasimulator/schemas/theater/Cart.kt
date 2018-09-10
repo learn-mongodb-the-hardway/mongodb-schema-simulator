@@ -27,7 +27,7 @@ class Cart (
     private val sessions: MongoCollection<Document>,
     private val theaters: MongoCollection<Document>,
     private val receipts: MongoCollection<Document>,
-    val id: ObjectId
+    val id: Any = ObjectId()
 ) : Scenario(logEntry) {
 
     override fun indexes(): List<Index> = listOf(
@@ -42,7 +42,7 @@ class Cart (
     fun create() {
         carts.insertOne(Document(mapOf(
             "_id" to id,
-            "state" to CartState.ACTIVE,
+            "state" to CartState.ACTIVE.toString(),
             "total" to 0,
             "reservations" to listOf<Document>(),
             "modifiedOn" to Date(),
@@ -114,7 +114,7 @@ class Cart (
             "_id" to id
         )), Document(mapOf(
             "\$set" to mapOf(
-                "state" to CartState.DONE
+                "state" to CartState.DONE.toString()
             )
         )))
 
@@ -157,7 +157,7 @@ class Cart (
      */
     fun releaseExpired() {
         val docs = carts.find(Document(mapOf(
-            "state" to CartState.EXPIRED
+            "state" to CartState.EXPIRED.toString()
         ))).toList()
 
         if (docs.isEmpty()) return
@@ -172,7 +172,7 @@ class Cart (
                 "_id" to cart["_id"]
             )), Document(mapOf(
                 "\$set" to mapOf(
-                    "state" to CartState.CANCELED
+                    "state" to CartState.CANCELED.toString()
                 )
             )))
         }

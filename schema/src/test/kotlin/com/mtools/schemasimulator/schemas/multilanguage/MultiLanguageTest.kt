@@ -8,6 +8,7 @@ import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -15,6 +16,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class MultiLanguageTest {
+    @BeforeEach
+    fun beforeEach() {
+        products.drop()
+        categories.drop()
+    }
 
     @Test
     @DisplayName("Correctly add new local for a category and see it reflected in the products")
@@ -98,25 +104,11 @@ class MultiLanguageTest {
         }
     }
 
-//    // Setup a bunch of categories
-//    var categories = [
-//        [1, {'en-us': 'car', 'de-de': 'auto'}]
-//    ];
     data class CatEntry(val id: Any, val doc: Document)
 
     fun setupCategories(cats: List<CatEntry>) {
         cats.forEach {
             Category(LogEntry(""), categories, products, it.id, it.doc).create()
         }
-    }
-
-//    fun setupProducts(cats: List<CatEntry>) {
-//        cats.forEach {
-//            Category(LogEntry(""), categories, products, it.id, it.doc).create()
-//        }
-//    }
-
-    fun setupProducts() {
-
     }
 }

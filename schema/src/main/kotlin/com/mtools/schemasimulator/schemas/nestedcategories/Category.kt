@@ -32,11 +32,11 @@ class Category(
 
     init {
         // If no parent was passed in
-        val paths = mutableListOf(category.split("/"))
-        paths.pop()
+        var paths = category.split("/")
+        paths = paths.dropLast(1)
 
         // Rejoin
-        parent = paths.joinToString { "/" }
+        parent = paths.joinToString("/")
         // Special case of the root
         if (parent == "" && category != "/") {
             parent = "/"
@@ -126,7 +126,7 @@ class Category(
     /*
      * Find a specific category by it's path
      */
-    private fun findOne(path: String, allowUsageOfCoveredIndex: Boolean = false) : Category {
+    fun findOne(path: String, allowUsageOfCoveredIndex: Boolean = false) : Category {
         var category: Category = Category(logEntry, categories)
 
         log("findOne") {
