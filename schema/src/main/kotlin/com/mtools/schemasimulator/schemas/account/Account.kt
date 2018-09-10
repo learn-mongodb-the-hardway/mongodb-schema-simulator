@@ -29,11 +29,13 @@ class Account(logEntry: LogEntry,
     fun create() = log("create") {
         val result = accounts.updateOne(
             Document(mapOf(
+                "name" to name
+            )),
+            Document(mapOf(
                 "name" to name,
                 "balance" to balance,
                 "pendingTransactions" to listOf<Document>()
             )),
-            Document(mapOf()),
             UpdateOptions().upsert(true))
         if (result.upsertedId == null) {
             throw SchemaSimulatorException("failed to create account entry")
@@ -43,12 +45,20 @@ class Account(logEntry: LogEntry,
     /*
      * Transfer an amount to this account from the provided account
      */
-    fun transfer(toAccount: Account, amount: BigDecimal) = log("transfer") {
-        val transaction = Transaction(logEntry, accounts, transactions, ObjectId(), this, toAccount, amount)
-        // Create transaction
-        transaction.create()
-        // Apply the transaction
-        transaction.settle()
+    fun transfer(toAccount: Account, amount: BigDecimal) : Transaction {
+        var result:Transaction? = null
+
+        log("transfer") {
+            val transaction = Transaction(logEntry, accounts, transactions, ObjectId(), this, toAccount, amount)
+            // Create transaction
+            transaction.create()
+            // Apply the transaction
+            transaction.settle()
+            // Set the transaction to return
+            result = transaction
+        }
+
+        return result!!
     }
 
     /*
@@ -128,7 +138,7 @@ class Account(logEntry: LogEntry,
     }
 }
 
-private class Transaction(
+class Transaction(
     logEntry: LogEntry,
     val accounts: MongoCollection<Document>,
     val transactions: MongoCollection<Document>,
@@ -140,7 +150,7 @@ private class Transaction(
         return listOf()
     }
 
-    private var state: TransactionStates = TransactionStates.UNKNOWN
+    var state: TransactionStates = TransactionStates.UNKNOWN
 
     enum class TransactionStates {
         INITIAL,
