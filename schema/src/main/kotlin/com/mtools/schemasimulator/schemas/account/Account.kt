@@ -8,8 +8,17 @@ import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
+import org.bson.types.Decimal128
 import org.bson.types.ObjectId
 import java.math.BigDecimal
+
+enum class TransactionFailPoints {
+    NONE,
+    FAIL_BEFORE_APPLY,
+    FAIL_AFTER_FIRST_APPLY,
+    FAIL_AFTER_APPLY,
+    FAIL_AFTER_COMMIT
+}
 
 class Account(logEntry: LogEntry,
               private val accounts: MongoCollection<Document>,
@@ -32,9 +41,11 @@ class Account(logEntry: LogEntry,
                 "name" to name
             )),
             Document(mapOf(
-                "name" to name,
-                "balance" to balance,
-                "pendingTransactions" to listOf<Document>()
+                "\$setOnInsert" to mapOf(
+                    "name" to name,
+                    "balance" to balance,
+                    "pendingTransactions" to listOf<Document>()
+                )
             )),
             UpdateOptions().upsert(true))
         if (result.upsertedId == null) {
@@ -45,7 +56,7 @@ class Account(logEntry: LogEntry,
     /*
      * Transfer an amount to this account from the provided account
      */
-    fun transfer(toAccount: Account, amount: BigDecimal) : Transaction {
+    fun transfer(toAccount: Account, amount: BigDecimal, failurePoint: TransactionFailPoints = TransactionFailPoints.NONE) : Transaction {
         var result:Transaction? = null
 
         log("transfer") {
@@ -53,7 +64,7 @@ class Account(logEntry: LogEntry,
             // Create transaction
             transaction.create()
             // Apply the transaction
-            transaction.settle()
+            transaction.settle(failurePoint)
             // Set the transaction to return
             result = transaction
         }
@@ -132,8 +143,8 @@ class Account(logEntry: LogEntry,
         doc ?: throw SchemaSimulatorException("failed to reload account $name")
         val value = doc["balance"]
 
-        if (value is BigDecimal) {
-            balance = value
+        if (value is Decimal128) {
+            balance = value.bigDecimalValue()
         }
     }
 }
@@ -168,7 +179,7 @@ class Transaction(
             "source" to fromAccount.name,
             "destination" to toAccount.name,
             "amount" to amount,
-            "state" to TransactionStates.INITIAL
+            "state" to TransactionStates.INITIAL.toString()
         )))
 
         state = TransactionStates.INITIAL
@@ -177,13 +188,26 @@ class Transaction(
     /*
      * Apply transaction to the accounts
      */
-    fun settle() = log("settle") {
+    fun settle(failurePoint: TransactionFailPoints = TransactionFailPoints.NONE) = log("settle") {
         // Advance the state of the transaction to pending
-        advance()
+        try {
+            advance()
+
+            if (failurePoint == TransactionFailPoints.FAIL_BEFORE_APPLY) {
+                throw Exception("failed to apply transaction")
+            }
+        } catch(ex: Exception) {
+            cancel()
+            throw SchemaSimulatorException("failed to advance transaction $id to state ${TransactionStates.PENDING}")
+        }
 
         // Attempt to debit amount from the first account
         try {
             fromAccount.debit(id, amount)
+
+            if (failurePoint == TransactionFailPoints.FAIL_AFTER_FIRST_APPLY) {
+                throw Exception("failed to apply transaction to both accounts")
+            }
         } catch(ex: Exception) {
             reverse()
             throw SchemaSimulatorException("failed to debit account ${fromAccount.name} with amount ${amount.unaryMinus()}")
@@ -192,6 +216,10 @@ class Transaction(
         // Attempt to credit the second account
         try {
             toAccount.credit(id, amount)
+
+            if (failurePoint == TransactionFailPoints.FAIL_AFTER_APPLY) {
+                throw Exception("failed after applying transaction to both accounts")
+            }
         } catch(ex: Exception) {
             reverse()
             throw SchemaSimulatorException("failed to credit account ${toAccount.name} with amount $amount")
@@ -207,6 +235,10 @@ class Transaction(
 
         // Clear out the applied transaction on the first account
         fromAccount.clear(id)
+
+        if (failurePoint == TransactionFailPoints.FAIL_AFTER_COMMIT) {
+            throw Exception("failed when attempting to set transaction to committed")
+        }
 
         // Clear out the applied transaction on the second account
         toAccount.clear(id)
@@ -259,10 +291,10 @@ class Transaction(
 
     fun cancel() = log("cancel") {
         val result = transactions.updateOne(Document(mapOf(
-            "id" to id
+            "_id" to id
         )), Document(mapOf(
             "\$set" to mapOf(
-                "state" to TransactionStates.CANCELED
+                "state" to TransactionStates.CANCELED.toString()
             )
         )))
 
@@ -276,10 +308,10 @@ class Transaction(
         state = when (state) {
             TransactionStates.INITIAL -> {
                 val result = transactions.updateOne(Document(mapOf(
-                    "_id" to id, "state" to TransactionStates.INITIAL
+                    "_id" to id, "state" to TransactionStates.INITIAL.toString()
                 )), Document(mapOf(
                     "\$set" to mapOf(
-                        "state" to TransactionStates.PENDING
+                        "state" to TransactionStates.PENDING.toString()
                     )
                 )))
 
@@ -291,10 +323,10 @@ class Transaction(
             }
             TransactionStates.PENDING -> {
                 val result = transactions.updateOne(Document(mapOf(
-                    "_id" to id, "state" to TransactionStates.PENDING
+                    "_id" to id, "state" to TransactionStates.PENDING.toString()
                 )), Document(mapOf(
                     "\$set" to mapOf(
-                        "state" to TransactionStates.COMMITTED
+                        "state" to TransactionStates.COMMITTED.toString()
                     )
                 )))
 
@@ -306,10 +338,10 @@ class Transaction(
             }
             TransactionStates.COMMITTED -> {
                 val result = transactions.updateOne(Document(mapOf(
-                    "_id" to id, "state" to TransactionStates.COMMITTED
+                    "_id" to id, "state" to TransactionStates.COMMITTED.toString()
                 )), Document(mapOf(
                     "\$set" to mapOf(
-                        "state" to TransactionStates.DONE
+                        "state" to TransactionStates.DONE.toString()
                     )
                 )))
 

@@ -39,6 +39,126 @@ class AccountTest {
         assertEquals(Transaction.TransactionStates.DONE.toString(), doc?.getString("state"))
     }
 
+    @Test
+    @DisplayName("Should correctly roll back transfer that fails before any application of amounts to accounts")
+    fun test2() {
+        val accountA = Account(LogEntry(""), accounts, transactions, "Joe1", BigDecimal(1000))
+        val accountB = Account(LogEntry(""), accounts, transactions, "Paul1", BigDecimal(1000))
+
+        accountA.create()
+        accountB.create()
+
+        // Fail transfer on apply
+        try {
+            accountA.transfer(accountB, BigDecimal(100), TransactionFailPoints.FAIL_BEFORE_APPLY)
+        } catch(ex: Exception) {
+            assertTrue(ex.message!!.contains("failed to advance transaction"))
+        }
+
+        accountA.reload()
+        accountB.reload()
+
+        assertEquals(BigDecimal(1000), accountA.balance)
+        assertEquals(BigDecimal(1000), accountB.balance)
+
+        val doc = transactions.find(Document(mapOf(
+            "source" to accountA.name
+        ))).firstOrNull()
+        assertNotNull(doc)
+        assertTrue { doc?.get("state") is String }
+        assertEquals(Transaction.TransactionStates.CANCELED.toString(), doc?.getString("state"))
+    }
+
+    @Test
+    @DisplayName("Should correctly roll back transfer that fails with only a single account being applied")
+    fun test3() {
+        val accountA = Account(LogEntry(""), accounts, transactions, "Joe2", BigDecimal(1000))
+        val accountB = Account(LogEntry(""), accounts, transactions, "Paul2", BigDecimal(1000))
+
+        accountA.create()
+        accountB.create()
+
+        // Fail transfer on apply
+        try {
+            accountA.transfer(accountB, BigDecimal(100), TransactionFailPoints.FAIL_AFTER_FIRST_APPLY)
+        } catch(ex: Exception) {
+            assertTrue(ex.message!!.contains("failed to debit account Joe2 with amount -100"))
+        }
+
+        accountA.reload()
+        accountB.reload()
+
+        assertEquals(BigDecimal(1000), accountA.balance)
+        assertEquals(BigDecimal(1000), accountB.balance)
+
+        val doc = transactions.find(Document(mapOf(
+            "source" to accountA.name
+        ))).firstOrNull()
+        assertNotNull(doc)
+        assertTrue { doc?.get("state") is String }
+        assertEquals(Transaction.TransactionStates.CANCELED.toString(), doc?.getString("state"))
+    }
+
+    @Test
+    @DisplayName("Should correctly roll back transfer that fails after application to accounts")
+    fun test4() {
+        val accountA = Account(LogEntry(""), accounts, transactions, "Joe3", BigDecimal(1000))
+        val accountB = Account(LogEntry(""), accounts, transactions, "Paul3", BigDecimal(1000))
+
+        accountA.create()
+        accountB.create()
+
+        // Fail transfer on apply
+        try {
+            accountA.transfer(accountB, BigDecimal(100), TransactionFailPoints.FAIL_AFTER_APPLY)
+        } catch(ex: Exception) {
+            assertTrue(ex.message!!.contains("failed to credit account Paul3 with amount 100"))
+        }
+
+        accountA.reload()
+        accountB.reload()
+
+        assertEquals(BigDecimal(1000), accountA.balance)
+        assertEquals(BigDecimal(1000), accountB.balance)
+
+        val doc = transactions.find(Document(mapOf(
+            "source" to accountA.name
+        ))).firstOrNull()
+        assertNotNull(doc)
+        assertTrue { doc?.get("state") is String }
+        assertEquals(Transaction.TransactionStates.CANCELED.toString(), doc?.getString("state"))
+    }
+
+    @Test
+    @DisplayName("Should correctly roll back transfer that fails after transaction set to commit but before clearing")
+    fun test5() {
+        val accountA = Account(LogEntry(""), accounts, transactions, "Joe4", BigDecimal(1000))
+        val accountB = Account(LogEntry(""), accounts, transactions, "Paul4", BigDecimal(1000))
+
+        accountA.create()
+        accountB.create()
+
+        // Fail transfer on apply
+        try {
+            accountA.transfer(accountB, BigDecimal(100), TransactionFailPoints.FAIL_AFTER_COMMIT)
+        } catch(ex: Exception) {
+            assertTrue(ex.message!!.contains("failed when attempting to set transaction to committed"))
+        }
+
+        accountA.reload()
+        accountB.reload()
+
+        assertEquals(BigDecimal(900), accountA.balance)
+        assertEquals(BigDecimal(1100), accountB.balance)
+
+        val doc = transactions.find(Document(mapOf(
+            "source" to accountA.name
+        ))).firstOrNull()
+        assertNotNull(doc)
+        assertTrue { doc?.get("state") is String }
+        assertEquals(Transaction.TransactionStates.COMMITTED.toString(), doc?.getString("state"))
+    }
+
     companion object {
         lateinit var client: MongoClient
         lateinit var db: MongoDatabase
