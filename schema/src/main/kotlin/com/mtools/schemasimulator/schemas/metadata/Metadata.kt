@@ -13,7 +13,7 @@ class Metadata(
     logEntry: LogEntry,
     val metadatas: MongoCollection<Document>,
     val id: Any,
-    val metadata: Document
+    val metadata:  List<Document>
 ) : Scenario(logEntry), AcceptsReadPreference {
     private var readPreference: ReadPreference = ReadPreference.primary()
 
@@ -74,7 +74,7 @@ class Metadata(
                 .withReadPreference(readPreference)
                 .find(query)
                 .map {
-                    Metadata(logEntry, metadatas, it["_id"]!!, it["metadata"] as Document)
+                    Metadata(logEntry, metadatas, it["_id"]!!, it["metadata"] as List<Document>)
                 }.toList()
         }
 

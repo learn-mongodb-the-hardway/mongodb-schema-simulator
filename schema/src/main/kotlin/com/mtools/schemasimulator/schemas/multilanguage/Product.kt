@@ -7,6 +7,7 @@ import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
 import org.bson.Document
+import org.bson.types.Decimal128
 import java.math.BigDecimal
 
 /*
@@ -15,11 +16,11 @@ import java.math.BigDecimal
 class Product(
     logEntry: LogEntry,
     private val products: MongoCollection<Document>,
-    private val id: Any,
-    private var name: String,
-    private var cost: BigDecimal,
-    private var currency: String,
-    private var categories: Document
+    val id: Any,
+    var name: String,
+    var cost: BigDecimal,
+    var currency: String,
+    var categories: List<Document>
 ) : Scenario(logEntry) {
     override fun indexes(): List<Index> = listOf(
         Index(products.namespace.databaseName, products.namespace.collectionName,
@@ -44,15 +45,16 @@ class Product(
      * Reload the product information
      */
     fun reload() = log("reload") {
-        val category = products.find(Document(mapOf(
+        val product = products.find(Document(mapOf(
             "_id" to id
         ))).firstOrNull()
 
-        category ?: throw SchemaSimulatorException("could not locate category with id $id")
+        product ?: throw SchemaSimulatorException("could not locate category with id $id")
+        val _cost = product["cost"] as Decimal128
 
-        name = category.getString("name")
-        cost = category["cost"] as BigDecimal
-        currency = category.getString("currency")
-        categories = category["categories"] as Document
+        name = product.getString("name")
+        cost = _cost.bigDecimalValue()
+        currency = product.getString("currency")
+        categories = product    ["categories"] as List<Document>
     }
 }

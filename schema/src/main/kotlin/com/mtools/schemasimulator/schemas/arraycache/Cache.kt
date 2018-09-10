@@ -12,9 +12,9 @@ class Cache(
     logEntry: LogEntry,
     private val cache: MongoCollection<Document>,
     private val sliceAt: Int = 0,
-    private val id: ObjectId = ObjectId()) : Scenario(logEntry) {
+    val id: ObjectId = ObjectId()) : Scenario(logEntry) {
 
-    fun create(cacheDocument: Document?) = log("create") {
+    fun create(cacheDocument: Document? = null) = log("create") {
         val data = mutableListOf<Document>()
 
         // Pre-allocate cache

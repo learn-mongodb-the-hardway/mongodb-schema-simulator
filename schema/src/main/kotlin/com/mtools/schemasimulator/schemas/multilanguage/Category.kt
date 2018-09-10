@@ -14,10 +14,10 @@ class Category(
     logEntry: LogEntry,
     private val categories: MongoCollection<Document>,
     private val products: MongoCollection<Document>,
-    private val id: Any,
+    val id: Any,
     // Hash of all the names by local ('en-us') etc
     // { 'en-us': 'computers' }
-    private var names: Document
+    var names: Document = Document()
 ) : Scenario(logEntry) {
     override fun indexes(): List<Index> = listOf()
 
@@ -51,11 +51,11 @@ class Category(
      */
     fun removeLocal(local: String) = log("removeLocal") {
         // Update the category with the new local for the name
-        var result = categories.updateOne(Document(mapOf(
+        val result = categories.updateOne(Document(mapOf(
             "_id" to id
         )), Document(mapOf(
-            "\$set" to mapOf(
-                "names.$local" to ""
+            "\$unset" to mapOf(
+                "names.$local" to 1
             )
         )))
 
@@ -69,7 +69,7 @@ class Category(
             "categories._id" to id
         )), Document(mapOf(
             "\$unset" to mapOf(
-                "categories.\$.names.$local" to ""
+                "categories.\$.names.$local" to 1
             )
         )))
     }
