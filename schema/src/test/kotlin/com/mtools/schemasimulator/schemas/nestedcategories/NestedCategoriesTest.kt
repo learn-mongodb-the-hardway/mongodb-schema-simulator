@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -34,7 +35,7 @@ class NestedCategoriesTest {
             listOf("3-1", "/3/1", "/3"), listOf("3-2", "/3/2", "/3")
         ))
 
-        val categories = Category(LogEntry(""), categories).findAllDirectChildCategories("/")
+        val categories = Category(createLogEntry(), categories).findAllDirectChildCategories("/")
         assertEquals(3, categories.size)
 
         val paths = mutableMapOf("/1" to true, "/2" to true, "/3" to true)
@@ -56,7 +57,7 @@ class NestedCategoriesTest {
             listOf("3-1", "/3/1", "/3"), listOf("3-2", "/3/2", "/3")
         ))
 
-        val categories = Category(LogEntry(""), categories).findAllChildCategories("/1")
+        val categories = Category(createLogEntry(), categories).findAllChildCategories("/1")
         assertEquals(2, categories.size)
 
         val paths = mutableMapOf("/1/1" to true, "/1/2" to true)
@@ -78,10 +79,10 @@ class NestedCategoriesTest {
             listOf("3-1", "/3/1", "/3"), listOf("3-2", "/3/2", "/3")
         ))
 
-        val _categories = Category(LogEntry(""), categories).findAllChildCategories("/1")
+        val _categories = Category(createLogEntry(), categories).findAllChildCategories("/1")
         assertEquals(2, _categories.size)
 
-        val category = Category(LogEntry(""), categories).findOne("/1/1")
+        val category = Category(createLogEntry(), categories).findOne("/1/1")
         assertNotNull(category)
         assertEquals("/1/1", category.category)
     }
@@ -97,7 +98,7 @@ class NestedCategoriesTest {
             listOf("prod4-1", 300, "usd", listOf("/3/1")), listOf("prod4-2", 200, "usd", listOf("/3/2")), listOf("prod4-3", 200, "usd", listOf("/3/3"))
         ))
 
-        val _products = Product(LogEntry(""), products, categories).findByCategory("/")
+        val _products = Product(createLogEntry(), products, categories).findByCategory("/")
         assertEquals(1, _products.size)
         assertEquals("/", _products[0].categories[0])
     }
@@ -121,7 +122,7 @@ class NestedCategoriesTest {
             listOf("prod4-1", 300, "usd", listOf("/3/1")), listOf("prod4-2", 200, "usd", listOf("/3/2")), listOf("prod4-3", 200, "usd", listOf("/3/3"))
         ))
 
-        val _products = Product(LogEntry(""), products, categories).findByDirectCategoryChildren("/")
+        val _products = Product(createLogEntry(), products, categories).findByDirectCategoryChildren("/")
         assertEquals(3, _products.size)
 
         val paths = mutableMapOf("/1" to true, "/2" to true, "/3" to true)
@@ -151,7 +152,7 @@ class NestedCategoriesTest {
             listOf("prod4-1", 300, "usd", listOf("/3/1")), listOf("prod4-2", 200, "usd", listOf("/3/2")), listOf("prod4-3", 200, "usd", listOf("/3/3"))
         ))
 
-        val _products = Product(LogEntry(""), products, categories).findByCategoryTree("/1")
+        val _products = Product(createLogEntry(), products, categories).findByCategoryTree("/1")
         assertEquals(2, _products.size)
 
         val paths = mutableMapOf("/1/1" to true, "/1/2" to true)
@@ -190,13 +191,13 @@ class NestedCategoriesTest {
 
     private fun setupCategories(cats: List<List<String>>) {
         cats.forEach {
-            Category(LogEntry(""), categories, ObjectId(), it[0], it[1], it[2]).create()
+            Category(createLogEntry(), categories, ObjectId(), it[0], it[1], it[2]).create()
         }
     }
 
     private fun setupProducts(prods: List<List<Any>>) {
         prods.forEach {
-            Product(LogEntry(""), products, categories,
+            Product(createLogEntry(), products, categories,
                 ObjectId(), it[0] as String, BigDecimal(it[1] as Int),
                 it[2] as String, it[3] as List<String>).create()
         }

@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.junit.jupiter.api.AfterAll
@@ -20,8 +21,8 @@ class AccountTest {
     @Test
     @DisplayName("Should correctly perform transfer between account A and account B of 100")
     fun test1() {
-        val accountA = Account(LogEntry(""), accounts, transactions, "Joe", BigDecimal(1000))
-        val accountB = Account(LogEntry(""), accounts, transactions, "Paul", BigDecimal(1000))
+        val accountA = Account(createLogEntry(), accounts, transactions, "Joe", BigDecimal(1000))
+        val accountB = Account(createLogEntry(), accounts, transactions, "Paul", BigDecimal(1000))
 
         accountA.create()
         accountB.create()
@@ -42,8 +43,8 @@ class AccountTest {
     @Test
     @DisplayName("Should correctly roll back transfer that fails before any application of amounts to accounts")
     fun test2() {
-        val accountA = Account(LogEntry(""), accounts, transactions, "Joe1", BigDecimal(1000))
-        val accountB = Account(LogEntry(""), accounts, transactions, "Paul1", BigDecimal(1000))
+        val accountA = Account(createLogEntry(), accounts, transactions, "Joe1", BigDecimal(1000))
+        val accountB = Account(createLogEntry(), accounts, transactions, "Paul1", BigDecimal(1000))
 
         accountA.create()
         accountB.create()
@@ -72,8 +73,8 @@ class AccountTest {
     @Test
     @DisplayName("Should correctly roll back transfer that fails with only a single account being applied")
     fun test3() {
-        val accountA = Account(LogEntry(""), accounts, transactions, "Joe2", BigDecimal(1000))
-        val accountB = Account(LogEntry(""), accounts, transactions, "Paul2", BigDecimal(1000))
+        val accountA = Account(createLogEntry(), accounts, transactions, "Joe2", BigDecimal(1000))
+        val accountB = Account(createLogEntry(), accounts, transactions, "Paul2", BigDecimal(1000))
 
         accountA.create()
         accountB.create()
@@ -102,8 +103,8 @@ class AccountTest {
     @Test
     @DisplayName("Should correctly roll back transfer that fails after application to accounts")
     fun test4() {
-        val accountA = Account(LogEntry(""), accounts, transactions, "Joe3", BigDecimal(1000))
-        val accountB = Account(LogEntry(""), accounts, transactions, "Paul3", BigDecimal(1000))
+        val accountA = Account(createLogEntry(), accounts, transactions, "Joe3", BigDecimal(1000))
+        val accountB = Account(createLogEntry(), accounts, transactions, "Paul3", BigDecimal(1000))
 
         accountA.create()
         accountB.create()
@@ -132,8 +133,8 @@ class AccountTest {
     @Test
     @DisplayName("Should correctly roll back transfer that fails after transaction set to commit but before clearing")
     fun test5() {
-        val accountA = Account(LogEntry(""), accounts, transactions, "Joe4", BigDecimal(1000))
-        val accountB = Account(LogEntry(""), accounts, transactions, "Paul4", BigDecimal(1000))
+        val accountA = Account(createLogEntry(), accounts, transactions, "Joe4", BigDecimal(1000))
+        val accountB = Account(createLogEntry(), accounts, transactions, "Paul4", BigDecimal(1000))
 
         accountA.create()
         accountB.create()

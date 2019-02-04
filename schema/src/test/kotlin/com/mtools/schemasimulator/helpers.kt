@@ -2,6 +2,7 @@ package com.mtools.schemasimulator
 
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.logger.MetricLogger
+import com.mtools.schemasimulator.messages.worker.MetricsResult
 import org.bson.Document
 import java.util.ArrayList
 import kotlin.test.assertEquals
@@ -85,15 +86,23 @@ fun Document.exists(path: String) : Boolean {
 }
 
 class TestMetricLogger(): MetricLogger {
+    override fun toMetricResult(): MetricsResult {
+        return MetricsResult(listOf())
+    }
+
     val measures = mutableMapOf<String, MutableList<LogEntry>>()
 
-    override fun createLogEntry(simulation: String): LogEntry {
+    override fun createLogEntry(simulation: String, tick: Long): LogEntry {
         if (!measures.containsKey(simulation)) {
             measures[simulation] = mutableListOf()
         }
 
-        val entry = LogEntry(simulation)
+        val entry = LogEntry(simulation, tick)
         measures[simulation]?.add(entry)
         return entry
     }
+}
+
+fun createLogEntry() : LogEntry {
+    return LogEntry("", 0)
 }

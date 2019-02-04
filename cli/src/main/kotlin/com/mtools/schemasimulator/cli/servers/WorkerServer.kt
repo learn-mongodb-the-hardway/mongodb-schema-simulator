@@ -10,7 +10,8 @@ import com.mtools.schemasimulator.cli.config.ConstantConfig
 import com.mtools.schemasimulator.cli.config.RemoteConfig
 import com.mtools.schemasimulator.executor.ThreadedSimulationExecutor
 import com.mtools.schemasimulator.load.Constant
-import com.mtools.schemasimulator.load.LoadPattern
+import com.mtools.schemasimulator.logger.InMemoryMetricLogger
+import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.logger.NoopLogger
 import com.mtools.schemasimulator.messages.master.Configure
 import com.mtools.schemasimulator.messages.master.ConfigureErrorResponse
@@ -18,14 +19,12 @@ import com.mtools.schemasimulator.messages.master.ConfigureResponse
 import com.mtools.schemasimulator.messages.master.Stop
 import com.mtools.schemasimulator.messages.master.Tick
 import com.mtools.schemasimulator.messages.worker.StopResponse
-import kotlinx.coroutines.experimental.Job
 import mu.KLogging
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
 import java.lang.Exception
 import java.net.InetSocketAddress
-import java.util.concurrent.ConcurrentLinkedQueue
 import javax.script.ScriptEngineManager
 import javax.script.SimpleScriptContext
 
@@ -38,6 +37,9 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
     // Internal variables
     private val mongoClients = mutableMapOf<String, MongoClient>()
     private val localWorkers = mutableMapOf<String, LocalWorker>()
+
+    // Metric logger, we store the data locally
+    private var metricLogger: MetricLogger = NoopLogger()
 
     // Attempt to read the configuration Kotlin file
     private val engine = ScriptEngineManager().getEngineByExtension("kts")!!
@@ -70,6 +72,9 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                 // Execute the configure method
                 val result = engine.eval("configure()", context)
 
+                // Set the logger
+                metricLogger = InMemoryMetricLogger(configure.name)
+
                 // Ensure the image
                 if (result is Config) {
                     // Locate the ticker we named
@@ -92,9 +97,6 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                                 return conn.send(Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: MongoClient failed to connect", 2)))
                             }
                         }
-
-                        // Metric logger
-                        val metricLogger = NoopLogger()
 
                         // We have the ticker we need to setup a local executor
                         val localTicker = LocalWorker(configure.name, mongoClients[configure.name]!!, when (tickerConfig.loadPatternConfig) {
@@ -144,7 +146,7 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                 }
 
                 // Send a stop reply mesage (to notify master we are done)
-                conn.send(Klaxon().toJsonString(StopResponse(stop.id)))
+                conn.send(Klaxon().toJsonString(StopResponse(stop.id, metricLogger.toMetricResult())))
                 // Close connection
                 conn.close()
                 // Wait for flushing to be done

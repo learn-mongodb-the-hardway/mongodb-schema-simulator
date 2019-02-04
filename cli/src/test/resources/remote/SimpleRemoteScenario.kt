@@ -49,7 +49,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         ))
 
         // Generate all the indexes
-        createIndexes(ShoppingCart(LogEntry(""), carts, inventories, orders))
+        createIndexes(ShoppingCart(LogEntry("", 0), carts, inventories, orders))
     }
 
     override fun before() {

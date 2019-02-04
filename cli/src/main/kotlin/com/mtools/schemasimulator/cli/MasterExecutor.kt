@@ -44,7 +44,12 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         val context = SimpleScriptContext()
 
         // Load the Script
-        engine.eval(configFileString, context)
+        try {
+            engine.eval(configFileString, context)
+        } catch (exception: Exception) {
+            logger.error { "Failed to evaluate the simulation script" }
+            throw exception
+        }
 
         // Attempt to invoke simulation
         val result = engine.eval("configure()", context) as? Config ?: throw Exception("Configuration file must contain a config {} section at the end")
@@ -58,9 +63,6 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             throw SystemExitException("Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}", 2)
         }
 
-        // Metric Logger
-        val metricLogger = NoopLogger()
-
         // For all executors processes wait
         val workers = result.coordinator.tickers.map {
             when (it) {
@@ -72,7 +74,7 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
                     LocalWorker(it.name, mongoClient, when (it.loadPatternConfig) {
                         is ConstantConfig -> {
                             Constant(
-                                ThreadedSimulationExecutor(it.simulation, metricLogger, it.name),
+                                ThreadedSimulationExecutor(it.simulation, NoopLogger(), it.name),
                                 it.loadPatternConfig.numberOfCExecutions,
                                 it.loadPatternConfig.executeEveryMilliseconds
                             )

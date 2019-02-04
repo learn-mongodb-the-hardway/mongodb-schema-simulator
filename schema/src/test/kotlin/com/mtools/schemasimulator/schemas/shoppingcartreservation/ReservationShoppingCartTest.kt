@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.f
 import com.mtools.schemasimulator.g
@@ -21,7 +22,7 @@ class ReservationShoppingCartTest {
     fun successfulAddProductToShoppingCartTest() {
         val userId = 1
         // Attempt to create a shopping cart
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
         ))).first()
@@ -65,7 +66,7 @@ class ReservationShoppingCartTest {
     @Test
     fun successfulUpdateReservationQuantityForAProductTest() {
         val userId = 2
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 3)
@@ -111,7 +112,7 @@ class ReservationShoppingCartTest {
     @Test
     fun failUpdateReservationQuantityForAProductDueToLimitedStockTest() {
         val userId = 3
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
@@ -167,7 +168,7 @@ class ReservationShoppingCartTest {
     @Test
     fun expireCarts() {
         val userId = 4
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)
@@ -214,7 +215,7 @@ class ReservationShoppingCartTest {
     @Test
     fun checkoutCart() {
         val userId = 5
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 1)

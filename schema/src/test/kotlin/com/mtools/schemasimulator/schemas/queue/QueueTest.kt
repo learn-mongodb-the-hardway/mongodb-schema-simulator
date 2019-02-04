@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.junit.jupiter.api.AfterAll
@@ -18,7 +19,7 @@ class QueueTest {
     @Test
     @DisplayName("Should correctly insert job into queue")
     fun test1() {
-        val queue = Queue(LogEntry(""), queues)
+        val queue = Queue(createLogEntry(), queues)
 
         // Add some items to the queue
         queue.publish(1, Document(mapOf("work" to 1)))
@@ -38,7 +39,7 @@ class QueueTest {
     @Test
     @DisplayName("Should correctly insert job into topic and listen to it")
     fun test2() {
-        val topic = Topic(LogEntry(""), db, topics, 100000, 1000)
+        val topic = Topic(createLogEntry(), db, topics, 100000, 1000)
         topic.create()
 
         // Add some items to the queue

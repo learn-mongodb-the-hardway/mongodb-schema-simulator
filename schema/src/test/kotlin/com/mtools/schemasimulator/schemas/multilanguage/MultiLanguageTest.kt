@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.junit.jupiter.api.AfterAll
@@ -33,11 +34,11 @@ class MultiLanguageTest {
         val cats = categories.find().toList()
 
         // Create a product
-        val product = Product(LogEntry(""), products, 1, "car", BigDecimal(100), "usd", cats)
+        val product = Product(createLogEntry(), products, 1, "car", BigDecimal(100), "usd", cats)
         product.create()
 
         // Let's attempt to add a local to the category
-        val cat = Category(LogEntry(""), categories, products, 1)
+        val cat = Category(createLogEntry(), categories, products, 1)
         cat.addLocal("es-es", "coche")
 
         // Reload the product
@@ -61,11 +62,11 @@ class MultiLanguageTest {
         val cats = categories.find().toList()
 
         // Create a product
-        val product = Product(LogEntry(""), products, 1, "car", BigDecimal(100), "usd", cats)
+        val product = Product(createLogEntry(), products, 1, "car", BigDecimal(100), "usd", cats)
         product.create()
 
         // Let's attempt to add a local to the category
-        val cat = Category(LogEntry(""), categories, products, 1)
+        val cat = Category(createLogEntry(), categories, products, 1)
         cat.removeLocal("de-de")
 
         // Reload the product
@@ -108,7 +109,7 @@ class MultiLanguageTest {
 
     fun setupCategories(cats: List<CatEntry>) {
         cats.forEach {
-            Category(LogEntry(""), categories, products, it.id, it.doc).create()
+            Category(createLogEntry(), categories, products, it.id, it.doc).create()
         }
     }
 }

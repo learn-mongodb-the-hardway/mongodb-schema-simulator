@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -23,7 +24,7 @@ class TimeSeriesTest {
         val timestamp = DateTime(2018, 10, 1, 1, 0, 0).toDate()
         // Create a new timeseries instance
         val timeSeries = TimeSeries(
-            LogEntry(""), timeseries, ObjectId(),
+            createLogEntry(), timeseries, ObjectId(),
             mutableListOf(), timestamp, "device1",
             TimeResolution.MINUTE).create()
 
@@ -51,7 +52,7 @@ class TimeSeriesTest {
         val timestamp = DateTime(2018, 10, 1, 1, 0, 0).toDate()
         // Create a new timeseries instance
         val timeSeries = TimeSeries.preAllocateMinute(
-            LogEntry(""), timeseries, ObjectId(),
+            createLogEntry(), timeseries, ObjectId(),
             "device1", timestamp).create()
 
         // Increment a single field
@@ -76,7 +77,7 @@ class TimeSeriesTest {
         val timestamp = DateTime(2018, 10, 1, 0, 0, 0).toDate()
         // Create a new timeseries instance
         val timeSeries = TimeSeries.preAllocateHour(
-            LogEntry(""), timeseries, ObjectId(),
+            createLogEntry(), timeseries, ObjectId(),
             "device1", timestamp).create()
 
         // Increment a single field
@@ -101,7 +102,7 @@ class TimeSeriesTest {
         val timestamp = DateTime(2018, 10, 1, 0, 0, 0).toDate()
         // Create a new timeseries instance
         val timeSeries = TimeSeries.preAllocateDay(
-            LogEntry(""), timeseries, ObjectId(),
+            createLogEntry(), timeseries, ObjectId(),
             "device1", timestamp).create()
 
         // Increment a single field

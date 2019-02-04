@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.f
 import com.mtools.schemasimulator.g
@@ -21,7 +22,7 @@ class NoReservationShoppingCartTest {
     @Test
     fun successfulAddProductToShoppingCartTest() {
         val userId = 1
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         // Attempt to create a shopping cart
         val inventory = inventories.find(Document(mapOf(
             "reservations" to mapOf("\$exists" to false), "quantity" to mapOf("\$gte" to 2)
@@ -64,7 +65,7 @@ class NoReservationShoppingCartTest {
         assertNotNull(inventory)
         assertNotNull(product)
 
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         cart.addProduct(userId, 1, product)
         cart.updateProduct(userId, 2, product)
 
@@ -98,7 +99,7 @@ class NoReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         cart.addProduct(userId, 1, product)
 
         // Force the expireAllCarts by setting a cutOff date that is expired
@@ -148,7 +149,7 @@ class NoReservationShoppingCartTest {
         assertNotNull(product)
 
         // Make a reservation first so we can modify it
-        val cart = ShoppingCart(LogEntry(""), carts, inventories, orders)
+        val cart = ShoppingCart(createLogEntry(), carts, inventories, orders)
         cart.addProduct(userId, 1, product)
 
         // Get the generated documents

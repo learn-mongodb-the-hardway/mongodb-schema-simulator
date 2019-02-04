@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -19,13 +20,13 @@ class MetadataTest {
     @Test
     @DisplayName("Correctly random metadata and query by metadata field")
     fun test1() {
-        val metadata1 = Metadata(LogEntry(""), metadatas, ObjectId(), listOf(
+        val metadata1 = Metadata(createLogEntry(), metadatas, ObjectId(), listOf(
             Document(mapOf("key" to "name", "value" to "test image")),
             Document(mapOf("key" to "type", "value" to "image")),
             Document(mapOf("key" to "iso", "value" to 100))
         ))
 
-        val metadata2 = Metadata(LogEntry(""), metadatas, ObjectId(), listOf(
+        val metadata2 = Metadata(createLogEntry(), metadatas, ObjectId(), listOf(
             Document(mapOf("key" to "name", "value" to "test image 2")),
             Document(mapOf("key" to "type", "value" to "image")),
             Document(mapOf("key" to "iso", "value" to 200))

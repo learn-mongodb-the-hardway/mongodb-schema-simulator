@@ -13,7 +13,7 @@ import kotlin.system.measureNanoTime
 interface SimulationExecutor {
     fun init(client: MongoClient)
     fun start()
-    fun execute() : Job
+    fun execute(tick: Long) : Job
     fun stop()
 }
 
@@ -26,8 +26,8 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
     abstract fun after()
     abstract fun init(client: MongoClient)
 
-    fun execute(logger: MetricLogger = NoopLogger()) {
-        val logEntry = logger.createLogEntry(this.javaClass.simpleName)
+    fun execute(logger: MetricLogger = NoopLogger(), tick: Long) {
+        val logEntry = logger.createLogEntry(this.javaClass.simpleName, tick)
 
         val time = measureNanoTime {
             run(logEntry)
@@ -36,7 +36,7 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
         logEntry.total = time
     }
 
-    abstract fun run(logEntry: LogEntry = LogEntry(""))
+    abstract fun run(logEntry: LogEntry = LogEntry("", 0))
     abstract fun afterAll()
 
     fun createIndexes(indexCreator: Scenario) {
@@ -75,10 +75,10 @@ class ThreadedSimulationExecutor(
         logger.info { "[$name]: stop executed successfully" }
     }
 
-    override fun execute() : Job {
+    override fun execute(tick: Long) : Job {
         return launch {
             simulation.before()
-            simulation.execute(metricLogger)
+            simulation.execute(metricLogger, tick)
             simulation.after()
         }
     }

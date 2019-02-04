@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import org.bson.Document
 import org.bson.types.Decimal128
@@ -22,7 +23,7 @@ class TheaterTest {
     @DisplayName("Should correctly insert job into queue")
     fun test1() {
         // Create a new Theater
-        val theater = Theater(LogEntry(""), theaters, sessions, ObjectId(), "The Royal", listOf(
+        val theater = Theater(createLogEntry(), theaters, sessions, ObjectId(), "The Royal", listOf(
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -37,7 +38,7 @@ class TheaterTest {
         val session = theater.addSession("Action Movie 5", "Another action movie", Date(), Date(), BigDecimal(10))
 
         // Create a cart
-        val cart = Cart(LogEntry(""), carts, sessions, theaters, receipts, ObjectId())
+        val cart = Cart(createLogEntry(), carts, sessions, theaters, receipts, ObjectId())
         cart.create()
 
         // Seats to reserve [y cord, x cord]
@@ -64,7 +65,7 @@ class TheaterTest {
     @DisplayName("Should correctly set up theater and session and book tickets but fail to reserve the tickets")
     fun test2() {
         // Create a new Theater
-        val theater = Theater(LogEntry(""), theaters, sessions, ObjectId(), "The Royal", listOf(
+        val theater = Theater(createLogEntry(), theaters, sessions, ObjectId(), "The Royal", listOf(
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -79,7 +80,7 @@ class TheaterTest {
         val session = theater.addSession("Action Movie 5", "Another action movie", Date(), Date(), BigDecimal(10))
 
         // Create a cart
-        val cart = Cart(LogEntry(""), carts, sessions, theaters, receipts, ObjectId())
+        val cart = Cart(createLogEntry(), carts, sessions, theaters, receipts, ObjectId())
         cart.create()
 
         // Seats to reserve [y cord, x cord]
@@ -94,7 +95,7 @@ class TheaterTest {
         cart.checkout()
 
         // Attempt to check out cart again
-        val cart2 = Cart(LogEntry(""), carts, sessions, theaters, receipts, ObjectId())
+        val cart2 = Cart(createLogEntry(), carts, sessions, theaters, receipts, ObjectId())
         cart2.create()
 
         // Seats to reserve [y cord, x cord]
@@ -116,7 +117,7 @@ class TheaterTest {
     @DisplayName("Should correctly set up theater and session and book tickets but fail to apply to cart as it is gone")
     fun test3() {
         // Create a new Theater
-        val theater = Theater(LogEntry(""), theaters, sessions, ObjectId(), "The Royal", listOf(
+        val theater = Theater(createLogEntry(), theaters, sessions, ObjectId(), "The Royal", listOf(
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -133,7 +134,7 @@ class TheaterTest {
         val seatsAvailable = session.seatsAvailable
 
         // Create a cart
-        val cart = Cart(LogEntry(""), carts, sessions, theaters, receipts, ObjectId())
+        val cart = Cart(createLogEntry(), carts, sessions, theaters, receipts, ObjectId())
         cart.create()
 
         // Seats to reserve [y cord, x cord]
@@ -172,7 +173,7 @@ class TheaterTest {
     @DisplayName("Should correctly find expired carts and remove any reservations in them")
     fun test4() {
         // Create a new Theater
-        val theater = Theater(LogEntry(""), theaters, sessions, ObjectId(), "The Royal", listOf(
+        val theater = Theater(createLogEntry(), theaters, sessions, ObjectId(), "The Royal", listOf(
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -189,7 +190,7 @@ class TheaterTest {
         val seatsAvailable = session.seatsAvailable
 
         // Create a cart
-        val cart = Cart(LogEntry(""), carts, sessions, theaters, receipts, ObjectId())
+        val cart = Cart(createLogEntry(), carts, sessions, theaters, receipts, ObjectId())
         cart.create()
 
         // Seats to reserve [y cord, x cord]
@@ -212,7 +213,7 @@ class TheaterTest {
         assertEquals(1, result.modifiedCount)
 
         // Release all the carts that are expired
-        Cart(LogEntry(""), carts, sessions, theaters, receipts).releaseExpired()
+        Cart(createLogEntry(), carts, sessions, theaters, receipts).releaseExpired()
 
         // Reload the session
         session.reload()

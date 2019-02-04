@@ -4,6 +4,7 @@ import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mtools.schemasimulator.createLogEntry
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.arraycache.Cache
 import org.bson.Document
@@ -20,7 +21,7 @@ class CacheTest {
     @Test
     @DisplayName("Should correctly a 5 line cache no pre-allocation")
     fun test1() {
-        val cache = Cache(LogEntry(""), caches, 5, ObjectId())
+        val cache = Cache(createLogEntry(), caches, 5, ObjectId())
         cache.create()
 
         cache.push(listOf(
@@ -43,7 +44,7 @@ class CacheTest {
     @Test
     @DisplayName("'Should correctly a 5 line cache with pre-allocation")
     fun test2() {
-        val cache = Cache(LogEntry(""), caches, 3, ObjectId())
+        val cache = Cache(createLogEntry(), caches, 3, ObjectId())
         cache.create(Document(mapOf(
             "a" to 1
         )))
