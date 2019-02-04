@@ -1,6 +1,8 @@
 package com.mtools.schemasimulator.logger
 
 import com.mtools.schemasimulator.messages.worker.MetricsResult
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 interface MetricLogger {
     fun createLogEntry(simulation: String, tick: Long): LogEntry
@@ -22,15 +24,19 @@ class NoopLogger: MetricLogger {
 }
 
 class InMemoryMetricLogger(val name: String) : MetricLogger {
-    private val logEntries = mutableListOf<LogEntry>()
+    private val logEntries = ConcurrentHashMap<Long, MutableList<LogEntry>>()
 
     override fun toMetricResult(): MetricsResult {
         return MetricsResult(listOf())
     }
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
+        if (!logEntries.containsKey(tick)) {
+            logEntries[tick] = CopyOnWriteArrayList<LogEntry>()
+        }
+
         val logEntry = LogEntry(simulation, tick)
-        logEntries += logEntry
+        logEntries[tick]!! += logEntry
         return logEntry
     }
 }
