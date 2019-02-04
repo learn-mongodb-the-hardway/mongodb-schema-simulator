@@ -9,7 +9,7 @@ interface MetricLogger {
     fun toMetricResult(): MetricsResult
 }
 
-class LogEntry(val name: String, val tick: Long, private val entries : MutableList<Pair<String, Long>> = mutableListOf()) {
+class LogEntry(val name: String, val tick: Long, val entries : MutableList<Pair<String, Long>> = mutableListOf()) {
     var total: Long = 0
 
     fun add(tag: String, time: Long) {
@@ -18,7 +18,7 @@ class LogEntry(val name: String, val tick: Long, private val entries : MutableLi
 }
 
 class NoopLogger: MetricLogger {
-    override fun toMetricResult(): MetricsResult = MetricsResult(listOf())
+    override fun toMetricResult(): MetricsResult = MetricsResult(mapOf())
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry = LogEntry(simulation, tick)
 }
@@ -27,7 +27,7 @@ class InMemoryMetricLogger(val name: String) : MetricLogger {
     private val logEntries = ConcurrentHashMap<Long, MutableList<LogEntry>>()
 
     override fun toMetricResult(): MetricsResult {
-        return MetricsResult(listOf())
+        return MetricsResult(logEntries)
     }
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
