@@ -7,6 +7,7 @@ import com.mtools.schemasimulator.logger.NoopLogger
 import com.mtools.schemasimulator.schemas.Scenario
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.launch
+import mu.KLogging
 import kotlin.system.measureNanoTime
 
 interface SimulationExecutor {
@@ -51,20 +52,27 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
 
 class ThreadedSimulationExecutor(
     private val simulation: Simulation,
-    private val metricLogger: MetricLogger = NoopLogger()) : SimulationExecutor {
+    private val metricLogger: MetricLogger = NoopLogger(),
+    private val name: String) : SimulationExecutor {
 
     override fun init(client: MongoClient) {
+        logger.info { "[$name]: Executing init" }
         simulation.init(client)
+        logger.info { "[$name]: init executed successfully" }
     }
 
     // Do any setup required for the full simulation
     override fun start() {
+        logger.info { "[$name]: Executing beforeAll" }
         simulation.beforeAll()
+        logger.info { "[$name]: beforeAll executed successfully" }
     }
 
     // Do any teardown required for the full simulation
     override fun stop() {
+        logger.info { "[$name]: Executing stop" }
         simulation.afterAll()
+        logger.info { "[$name]: stop executed successfully" }
     }
 
     override fun execute() : Job {
@@ -74,4 +82,6 @@ class ThreadedSimulationExecutor(
             simulation.after()
         }
     }
+
+    companion object : KLogging()
 }

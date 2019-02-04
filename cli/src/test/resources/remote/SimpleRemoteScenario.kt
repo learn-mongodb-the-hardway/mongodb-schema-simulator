@@ -19,6 +19,8 @@ class SimpleSimulation(seedUserId: Int = 1,
                        private val numberOfDocuments: Int = 5) : Simulation(SimulationOptions(iterations = 10)) {
     override fun init(client: MongoClient) {
         this.client = client
+        // Drop the database
+        client.getDatabase("integration_tests").drop()
     }
 
     private var userId: AtomicInteger = AtomicInteger(seedUserId)
@@ -40,12 +42,6 @@ class SimpleSimulation(seedUserId: Int = 1,
         products = db.getCollection("products")
         inventories = db.getCollection("inventories")
         orders = db.getCollection("orders")
-
-        // Drop collection
-        carts.drop()
-        products.drop()
-        inventories.drop()
-        orders.drop()
 
         // Generate some documents
         ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
@@ -97,7 +93,7 @@ class SimpleSimulation(seedUserId: Int = 1,
     }
 }
 
-fun simulation() : Config {
+fun configure() : Config {
     return config {
         mongodb {
             url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
@@ -151,5 +147,3 @@ fun simulation() : Config {
         }
     }
 }
-
-simulation()
