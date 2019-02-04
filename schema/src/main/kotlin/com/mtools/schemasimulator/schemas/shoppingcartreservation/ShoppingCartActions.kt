@@ -20,7 +20,7 @@ class ShoppingCart(
 ) : Scenario(logEntry) {
     fun checkout(userId: Any, name: String, address: String, payment: Document) = log("checkout") {
         val cart = carts.find(Document(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "state" to "active"
         ))).first()
 
@@ -140,7 +140,7 @@ class ShoppingCart(
 
         // Get the cart
         val cart = carts.find(Document(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "products._id" to product["_id"],
             "state" to "active"
         ))).first()
@@ -161,7 +161,7 @@ class ShoppingCart(
         val delta = quantity - oldQuantity
         // Update the cart with new size
         var result = carts.updateOne(Document(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "products._id" to product["_id"],
             "state" to "active"
         )), Document(mapOf(
@@ -200,7 +200,7 @@ class ShoppingCart(
         if (result.modifiedCount == 0L) {
             // Update the cart with new size
             result = carts.updateOne(Document(mapOf(
-                "_id" to userId,
+                "userId" to userId,
                 "products._id" to product["_id"],
                 "state" to "active"
             )), Document(mapOf(
@@ -219,7 +219,7 @@ class ShoppingCart(
     fun addProduct(userId: Any, quantity: Int, product: Document) = log("addProduct")  {
         // Execute cart update
         var result = carts.updateOne(Document(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "state" to "active"
         )), Document(mapOf(
             "\$set" to mapOf("modifiedOn" to Date()),
@@ -254,7 +254,7 @@ class ShoppingCart(
             if (result.modifiedCount == 0L) {
                 // Execute cart update
                 result = carts.updateOne(Document(mapOf(
-                    "_id" to userId
+                    "userId" to userId
                 )), Document(mapOf(
                     "\$set" to mapOf("modifiedOn" to Date()),
                     "\$pull" to mapOf(

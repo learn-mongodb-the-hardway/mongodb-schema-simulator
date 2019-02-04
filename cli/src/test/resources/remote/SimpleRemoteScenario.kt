@@ -93,6 +93,9 @@ class SimpleSimulation(seedUserId: Int = 1,
     }
 }
 
+val tickResolution = 1L
+val numberOfTicks = 60000L
+
 fun configure() : Config {
     return config {
         mongodb {
@@ -103,9 +106,9 @@ fun configure() : Config {
         // Master level coordinator
         coordinator {
             // Each Master tick is every 1 millisecond
-            tickResolutionMilliseconds(1)
+            tickResolutionMilliseconds(tickResolution)
             // Run for 1000 ticks or in this case 1000 simulated milliseconds
-            runForNumberOfTicks(11)
+            runForNumberOfTicks(numberOfTicks)
 
             // Local running worker thread
             remote {

@@ -86,10 +86,6 @@ fun Document.exists(path: String) : Boolean {
 }
 
 class TestMetricLogger(): MetricLogger {
-    override fun toMetricResult(): MetricsResult {
-        return MetricsResult(mapOf())
-    }
-
     val measures = mutableMapOf<String, MutableList<LogEntry>>()
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {

@@ -12,6 +12,7 @@ import java.util.*
 class RemoteWorker(private val name: String, private val config: MasterExecutorConfig): Worker {
     private val configureReplyMessage = """method"\s*:\s*"configure"""".toRegex()
     private val stopReplyMessage = """method"\s*:\s*"stop"""".toRegex()
+    private val metricsMessage = """method"\s*:\s*"metrics"""".toRegex()
     private var client: WebSocketConnectionClient? = null
     var initialized = false
     var stopped = false
@@ -31,6 +32,8 @@ class RemoteWorker(private val name: String, private val config: MasterExecutorC
                 initialized = true
             } else if (message.contains(stopReplyMessage)) {
                 stopped = true
+            } else if (message.contains(metricsMessage)){
+                println("== received metrics message")
             }
         }
     }

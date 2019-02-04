@@ -73,7 +73,7 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                 val result = engine.eval("configure()", context)
 
                 // Set the logger
-                metricLogger = InMemoryMetricLogger(configure.name)
+                metricLogger = InMemoryMetricLogger(configure.name, conn)
 
                 // Ensure the image
                 if (result is Config) {
@@ -146,7 +146,7 @@ class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServ
                 }
 
                 // Send a stop reply mesage (to notify master we are done)
-                conn.send(Klaxon().toJsonString(StopResponse(stop.id, metricLogger.toMetricResult())))
+                conn.send(Klaxon().toJsonString(StopResponse(stop.id)))
                 // Close connection
                 conn.close()
                 // Wait for flushing to be done
