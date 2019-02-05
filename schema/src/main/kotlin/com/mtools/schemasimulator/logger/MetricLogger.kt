@@ -2,28 +2,44 @@ package com.mtools.schemasimulator.logger
 
 import com.beust.klaxon.Klaxon
 import com.mtools.schemasimulator.messages.worker.MetricsResult
-import org.java_websocket.WebSocket
-import java.util.concurrent.ConcurrentHashMap
+import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 
 interface MetricLogger {
     fun createLogEntry(simulation: String, tick: Long): LogEntry
+    fun flush()
 }
 
-class LogEntry(val name: String, val tick: Long, val entries : MutableList<Pair<String, Long>> = mutableListOf()) {
-    var total: Long = 0
-
+class LogEntry(val name: String, val tick: Long, val entries : MutableList<Pair<String, Long>> = mutableListOf(), var total: Long = 0) {
     fun add(tag: String, time: Long) {
         entries += tag to time
     }
 }
 
 class NoopLogger: MetricLogger {
+    override fun flush() {}
+
     override fun createLogEntry(simulation: String, tick: Long): LogEntry = LogEntry(simulation, tick)
 }
 
-class InMemoryMetricLogger(val name: String, val conn: WebSocket, val cutOff: Int = 500) : MetricLogger {
+class LocalMetricLogger() : MetricLogger {
+    var logEntries = CopyOnWriteArrayList<LogEntry>()
+
+    override fun createLogEntry(simulation: String, tick: Long): LogEntry {
+        val logEntry = LogEntry(simulation, tick)
+        logEntries.add(logEntry)
+        return logEntry
+    }
+
+    override fun flush() {}
+}
+
+class RemoteMetricLogger(val name: String, val uri: URI, val cutOff: Int = 500) : MetricLogger {
     private var logEntries = CopyOnWriteArrayList<LogEntry>()
+
+    override fun flush() {
+        postMessage(uri, "/metrics", Klaxon().toJsonString(MetricsResult(logEntries)))
+    }
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
         synchronized(this) {
@@ -36,7 +52,7 @@ class InMemoryMetricLogger(val name: String, val conn: WebSocket, val cutOff: In
                 // Empty the list
                 logEntries = CopyOnWriteArrayList()
                 // Send a metrics message
-                conn.send(Klaxon().toJsonString(MetricsResult(list)))
+                postMessage(uri, "/metrics", Klaxon().toJsonString(MetricsResult(list)))
             }
 
             return logEntry

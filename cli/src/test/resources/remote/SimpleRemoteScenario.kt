@@ -94,7 +94,10 @@ class SimpleSimulation(seedUserId: Int = 1,
 }
 
 val tickResolution = 1L
-val numberOfTicks = 60000L
+//val numberOfTicks = 100L
+//val numberOfTicks = 3000L
+//val numberOfTicks = 30000L
+val numberOfTicks = 30000L * 2 * 3
 
 fun configure() : Config {
     return config {
@@ -118,7 +121,7 @@ fun configure() : Config {
                 constant {
                     // Each tick produces two concurrently
                     // executed instances of the simulation
-                    numberOfCExecutions(2)
+                    numberOfCExecutions(10)
                     // Execute every 100 milliseconds
                     executeEveryMilliseconds(2)
                 }
@@ -137,7 +140,7 @@ fun configure() : Config {
                 constant {
                     // Each tick produces two concurrently
                     // executed instances of the simulation
-                    numberOfCExecutions(2)
+                    numberOfCExecutions(10)
                     // Execute every 100 milliseconds
                     executeEveryMilliseconds(4)
                 }

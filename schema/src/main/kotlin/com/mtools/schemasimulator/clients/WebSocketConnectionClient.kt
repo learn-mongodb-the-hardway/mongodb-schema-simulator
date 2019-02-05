@@ -26,6 +26,9 @@ class WebSocketConnectionClient(
         connected = false
     }
 
+    val clientURI: URI
+        get() = uri
+
     // Client
     private val client = Client(this, uri, onMessage, onOpen, onError)
 
@@ -77,6 +80,14 @@ class WebSocketConnectionClient(
     fun disconnect() {
         client.destroy()
         destroyed = true
+    }
+
+    fun sendPing() {
+        client.sendPing()
+    }
+
+    fun isConnected(): Boolean {
+        return client.isOpen
     }
 
     private class Client(

@@ -4,6 +4,8 @@ ext {
     kotlinArgparserVersion = '2.0.3'
     rpcServerVersion = '0.9'
     rpcClientVersion = '0.9'
+    sparkVersion = "2.7.2"
+    sparkKotlinVersion = "1.0.0-alpha"
 }
 
 apply plugin: 'application'
@@ -24,6 +26,12 @@ dependencies {
     compile "com.xenomachina:kotlin-argparser:$kotlinArgparserVersion"
     compile "ch.qos.logback:logback-classic:$logbackVersion"
     compile "org.java-websocket:Java-WebSocket:$websocketVersion"
+// https://mvnrepository.com/artifact/org.knowm.xchart/xchart
+    compile group: 'org.knowm.xchart', name: 'xchart', version: '3.5.2'
+// https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+    compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+    compile "com.sparkjava:spark-core:$sparkVersion"
+    compile "com.sparkjava:spark-kotlin:$sparkKotlinVersion"
 
     runtime fileTree(dir: 'libs', include: ['*.jar'])
 }

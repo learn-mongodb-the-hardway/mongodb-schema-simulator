@@ -10,160 +10,171 @@ import com.mtools.schemasimulator.cli.config.ConstantConfig
 import com.mtools.schemasimulator.cli.config.RemoteConfig
 import com.mtools.schemasimulator.executor.ThreadedSimulationExecutor
 import com.mtools.schemasimulator.load.Constant
-import com.mtools.schemasimulator.logger.InMemoryMetricLogger
-import com.mtools.schemasimulator.logger.MetricLogger
-import com.mtools.schemasimulator.logger.NoopLogger
+import com.mtools.schemasimulator.logger.RemoteMetricLogger
+import com.mtools.schemasimulator.logger.postMessage
 import com.mtools.schemasimulator.messages.master.Configure
 import com.mtools.schemasimulator.messages.master.ConfigureErrorResponse
 import com.mtools.schemasimulator.messages.master.ConfigureResponse
+import com.mtools.schemasimulator.messages.master.Done
 import com.mtools.schemasimulator.messages.master.Stop
 import com.mtools.schemasimulator.messages.master.Tick
-import com.mtools.schemasimulator.messages.worker.StopResponse
 import mu.KLogging
-import org.java_websocket.WebSocket
-import org.java_websocket.handshake.ClientHandshake
-import org.java_websocket.server.WebSocketServer
+import spark.kotlin.Http
+import spark.kotlin.RouteHandler
+import spark.kotlin.ignite
+import spark.kotlin.options
 import java.lang.Exception
-import java.net.InetSocketAddress
 import javax.script.ScriptEngineManager
 import javax.script.SimpleScriptContext
 
-class WorkerServer(val config: WorkerExecutorConfig, val onClose: (s: WorkerServer) -> Unit): WebSocketServer(InetSocketAddress(config.uri.host, config.uri.port)) {
-    private val configureMessage = """method"\s*:\s*"configure"""".toRegex()
-    private val tickMessage = """method"\s*:\s*"tick"""".toRegex()
-    private val stopMessage = """method"\s*:\s*"stop"""".toRegex()
+class WorkerServer(val config: WorkerExecutorConfig) {
     private var name: String = ""
-
     // Internal variables
     private val mongoClients = mutableMapOf<String, MongoClient>()
     private val localWorkers = mutableMapOf<String, LocalWorker>()
 
-    // Metric logger, we store the data locally
-    private var metricLogger: MetricLogger = NoopLogger()
-
     // Attempt to read the configuration Kotlin file
     private val engine = ScriptEngineManager().getEngineByExtension("kts")!!
+    // Http server
+    private val http: Http = ignite()
+        .port(config.uri.port)
 
-    override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
-        logger.info { "connection from client: [${conn!!.remoteSocketAddress.address.hostAddress}]" }
-    }
+    private fun handleConfigure(routeHandler: RouteHandler) : String {
+        val configure = Klaxon().parse<Configure>(routeHandler.request.body())
+        configure ?: return Klaxon().toJsonString(ConfigureErrorResponse(0, "[$name]: No post body found", 2))
 
-    override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
-        logger.info { "connection closed from client: [${conn!!.remoteSocketAddress.address.hostAddress}]" }
-    }
+        // Set the name
+        name = configure.name
 
-    override fun onMessage(conn: WebSocket?, message: String?) {
-        logger.debug { "onMessage from [${conn!!.remoteSocketAddress.address.hostAddress}]: [$message]" }
+        // Create context
+        val context = SimpleScriptContext()
 
-        if (message != null && message.contains(configureMessage) && conn != null) {
-            val configure = Klaxon().parse<Configure>(message)
-            if (configure != null) {
-                // Set the name
-                name = configure.name
+        logger.info { "[$name]: received config message, setup worker executor" }
 
-                // Create context
-                val context = SimpleScriptContext()
+        // Load the scenario
+        engine.eval(configure.configString, context)
 
-                logger.info { "[$name]: received config message, setup worker executor" }
+        // Execute the configure method
+        val result = engine.eval("configure()", context)
 
-                // Load the scenario
-                engine.eval(configure.configString, context)
+        // Set the logger
+        val metricLogger = RemoteMetricLogger(configure.name, config.masterURI)
 
-                // Execute the configure method
-                val result = engine.eval("configure()", context)
+        // Ensure the image
+        if (result is Config) {
+            // Locate the ticker we named
+            val tickerConfig = result.coordinator.tickers
+                .filterIsInstance<RemoteConfig>()
+                .filter {
+                    it.name == configure.name
+                }.firstOrNull()
 
-                // Set the logger
-                metricLogger = InMemoryMetricLogger(configure.name, conn)
-
-                // Ensure the image
-                if (result is Config) {
-                    // Locate the ticker we named
-                    val tickerConfig = result.coordinator.tickers
-                        .filterIsInstance<RemoteConfig>()
-                        .filter {
-                        it.name == configure.name
-                    }.firstOrNull()
-
-                    // Ticker is null return an error
-                    if (tickerConfig != null) {
-                        // Check if there are clients available already otherwise add a new one
-                        if (mongoClients.containsKey(configure.name).not()) {
-                            try {
-                                val mongoClient = MongoClient(MongoClientURI(result.mongo.url))
-                                mongoClient.listDatabaseNames().first()
-                                mongoClients[configure.name] = mongoClient
-                            } catch(ex: MongoException) {
-                                logger.error { "[$name]: Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}"}
-                                return conn.send(Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: MongoClient failed to connect", 2)))
-                            }
-                        }
-
-                        // We have the ticker we need to setup a local executor
-                        val localTicker = LocalWorker(configure.name, mongoClients[configure.name]!!, when (tickerConfig.loadPatternConfig) {
-                            is ConstantConfig -> {
-                                Constant(
-                                    ThreadedSimulationExecutor(tickerConfig.simulation, metricLogger, name),
-                                    tickerConfig.loadPatternConfig.numberOfCExecutions,
-                                    tickerConfig.loadPatternConfig.executeEveryMilliseconds
-                                )
-                            }
-                            else -> throw Exception("[$name]: Unknown LoadPattern Config Object")
-                        })
-
-                        // Start the ticker
-                        localTicker.start()
-
-                        // Save the ticker
-                        localWorkers[configure.name] = localTicker
-
-                        // Send confirmation
-                        return conn.send(Klaxon().toJsonString(ConfigureResponse(configure.id)))
+            // Ticker is null return an error
+            if (tickerConfig != null) {
+                // Check if there are clients available already otherwise add a new one
+                if (mongoClients.containsKey(configure.name).not()) {
+                    try {
+                        val mongoClient = MongoClient(MongoClientURI(result.mongo.url))
+                        mongoClient.listDatabaseNames().first()
+                        mongoClients[configure.name] = mongoClient
+                    } catch(ex: MongoException) {
+                        logger.error { "[$name]: Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}"}
+                        return Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: MongoClient failed to connect", 2))
                     }
-
-                    return conn.send(Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: Could not locate remote config", 2)))
                 }
 
-                logger.error { "[$name]: Configuration file not expected type"}
-                conn.send(Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: Configuration file not expected type", 2)))
+                // We have the ticker we need to setup a local executor
+                val localTicker = LocalWorker(configure.name, mongoClients[configure.name]!!, when (tickerConfig.loadPatternConfig) {
+                    is ConstantConfig -> {
+                        Constant(
+                            ThreadedSimulationExecutor(tickerConfig.simulation, metricLogger, name),
+                            tickerConfig.loadPatternConfig.numberOfCExecutions,
+                            tickerConfig.loadPatternConfig.executeEveryMilliseconds
+                        )
+                    }
+                    else -> throw Exception("[$name]: Unknown LoadPattern Config Object")
+                }, metricLogger)
+
+                // Start the ticker
+                localTicker.start()
+
+                // Save the ticker
+                localWorkers[configure.name] = localTicker
+
+                // Send confirmation
+                return Klaxon().toJsonString(ConfigureResponse(configure.id))
             }
-        } else if (message != null && message.contains(tickMessage) && conn != null) {
-            val tick = Klaxon().parse<Tick>(message)
-            if (tick != null) {
-                logger.debug { "[$name]: received tick message: ${tick.time}" }
 
-                // For each ticker tick a tick
-                localWorkers.values.forEach {
-                    it.tick(tick.time)
-                }
-            }
-        } else if (message != null && message.contains(stopMessage) && conn != null) {
-            val stop = Klaxon().parse<Stop>(message)
-            if (stop != null) {
-                // For each ticker tick a tick
-                localWorkers.forEach { key, value ->
-                    logger.info { "[$name]: executing stop message for: [$key]" }
-                    value.stop()
-                }
-
-                // Send a stop reply mesage (to notify master we are done)
-                conn.send(Klaxon().toJsonString(StopResponse(stop.id)))
-                // Close connection
-                conn.close()
-                // Wait for flushing to be done
-                while (!conn.isFlushAndClose) {
-                    Thread.sleep(1)
-                }
-                // Call shutdown hook
-                onClose(this)
-            }
+            return Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: Could not locate remote config", 2))
         }
+
+        logger.error { "[$name]: Configuration file not expected type"}
+        return Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: Configuration file not expected type", 2))
     }
 
-    override fun onStart() {
-        logger.info { "starting server on: ${config.uri.host}:${config.uri.port}" }
+    fun start() {
+        http.post("/configure", "application/json") {
+            logger.info("========================= /configure")
+            handleConfigure(this)
+        }
+
+        http.post("/tick") {
+            logger.info("========================= /tick")
+            handleTick(this)
+        }
+
+        http.post("/stop") {
+            logger.info("========================= /stop")
+            handleStop(this)
+        }
+
+        http.service.awaitInitialization()
     }
 
-    override fun onError(conn: WebSocket?, ex: Exception?) {
+    private fun handleStop(routeHandler: RouteHandler): Any {
+        val body = routeHandler.request.body()
+        body ?: return ""
+
+        val stop = Klaxon().parse<Stop>(body)
+        stop ?: return ""
+
+        // Wait for workers to finish
+        Thread {
+            // For each ticker tick a tick
+            localWorkers.forEach { key, value ->
+                logger.info { "[$name]: executing stop message for: [$key]" }
+                value.stop()
+            }
+
+            // Send the worker done
+            val response = postMessage(config.masterURI, "/worker/done", Klaxon().toJsonString(Done(config.uri.host, config.uri.port)))
+
+            // Shut down http server
+            http.stop()
+            // Shut down mongo client
+            mongoClients.forEach { _, u ->
+                u.close()
+            }
+        }.start()
+
+        return ""
+    }
+
+    private fun handleTick(routeHandler: RouteHandler): Any {
+        val body = routeHandler.request.body()
+        body ?: return ""
+
+        val tick = Klaxon().parse<Tick>(body)
+        tick ?: return ""
+
+        logger.debug { "[$name]: received tick message: ${tick.time}" }
+
+        // For each ticker tick a tick
+        localWorkers.values.forEach {
+            it.tick(tick.time)
+        }
+
+        return ""
     }
 
     companion object : KLogging()

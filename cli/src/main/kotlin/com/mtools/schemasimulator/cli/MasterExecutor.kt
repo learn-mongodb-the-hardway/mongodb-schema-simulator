@@ -8,17 +8,27 @@ import com.mtools.schemasimulator.cli.config.ConstantConfig
 import com.mtools.schemasimulator.cli.config.LocalConfig
 import com.mtools.schemasimulator.cli.config.RemoteConfig
 import com.mtools.schemasimulator.cli.workers.LocalWorker
+import com.mtools.schemasimulator.cli.workers.MetricsAggregator
 import com.mtools.schemasimulator.cli.workers.RemoteWorker
 import com.mtools.schemasimulator.executor.ThreadedSimulationExecutor
 import com.mtools.schemasimulator.load.Constant
-import com.mtools.schemasimulator.logger.NoopLogger
+import com.mtools.schemasimulator.logger.LocalMetricLogger
 import com.xenomachina.argparser.SystemExitException
 import mu.KLogging
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.jetbrains.kotlin.script.jsr223.KotlinJsr223JvmLocalScriptEngine
 import java.net.URI
 import java.util.concurrent.LinkedBlockingDeque
 import javax.script.ScriptEngineManager
 import javax.script.SimpleScriptContext
+import org.knowm.xchart.BitmapEncoder.BitmapFormat
+import org.knowm.xchart.BitmapEncoder
+import org.knowm.xchart.XYChartBuilder
+import org.knowm.xchart.XYSeries
+import org.knowm.xchart.style.markers.SeriesMarkers
+import org.knowm.xchart.style.Styler
+import org.knowm.xchart.XYSeries.XYSeriesRenderStyle
+import org.knowm.xchart.style.Styler.LegendPosition
 
 data class MasterExecutorConfig (
     val master: Boolean,
@@ -28,14 +38,15 @@ data class MasterExecutorConfig (
     val waitMSBetweenReconnectAttempts: Long = 1000)
 
 class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
-    private val masterExecutorServer = MasterExecutorServer(config)
+    private val metricsAggregator = MetricsAggregator()
+    private val masterExecutorServer = MasterExecutorServer(config, metricsAggregator)
 
     fun start() {
         var mongoClient: MongoClient?
 
         // Attempt to read the configuration Kotlin file
         val engine = ScriptEngineManager()
-            .getEngineByExtension("kts")!! as? KotlinJsr223JvmLocalScriptEngine ?: throw SystemExitException("Expected the script engine to be a valid Kotlin Script engine", 2)
+            .getEngineByExtension("kts")!! as KotlinJsr223JvmLocalScriptEngine
 
         // Read the string
         val configFileString = config.config
@@ -63,6 +74,9 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             throw SystemExitException("Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}", 2)
         }
 
+        // Metric logger
+        val metricLogger = LocalMetricLogger()
+
         // For all executors processes wait
         val workers = result.coordinator.tickers.map {
             when (it) {
@@ -74,7 +88,7 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
                     LocalWorker(it.name, mongoClient, when (it.loadPatternConfig) {
                         is ConstantConfig -> {
                             Constant(
-                                ThreadedSimulationExecutor(it.simulation, NoopLogger(), it.name),
+                                ThreadedSimulationExecutor(it.simulation, metricLogger, it.name),
                                 it.loadPatternConfig.numberOfCExecutions,
                                 it.loadPatternConfig.executeEveryMilliseconds
                             )
@@ -87,13 +101,11 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             }
         }
 
-        // Do we have the master flag enabled
-        if (config.master) {
-            masterExecutorServer.start()
-        }
-
         // Register all the remote workers
         masterExecutorServer.nonInitializedWorkers = LinkedBlockingDeque(workers.filterIsInstance<RemoteWorker>())
+
+        // Do we have the master flag enabled
+        masterExecutorServer.start()
 
         // Wait for all workers to be ready
         workers.forEach {
@@ -124,13 +136,93 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             currentTime += result.coordinator.tickResolutionMiliseconds
         }
 
-        // Wait for the workers to finish
-        workers.forEach {
-            it.stop()
+        logger.info { "Stopping workers" }
+
+        val stopThreads = workers.map {
+            Thread(Runnable {
+                it.stop()
+            })
         }
+
+        stopThreads.forEach { it.start() }
+
+        logger.info { "Wait for workers to finish" }
+
+        for (thread in stopThreads) {
+            thread.join()
+        }
+
+        // Merge all the data
+        metricsAggregator.processTicks(metricLogger.logEntries)
+
+        logger.info { "Starting generation of graph" }
+
+        // Generate a graph
+        GraphGenerator().generate(metricsAggregator.metrics)
 
         logger.info { "Finished executing simulation, terminating" }
     }
 
     companion object : KLogging()
+}
+
+class GraphGenerator() {
+    fun generate(entries: MutableMap<Long, MutableMap<String, SummaryStatistics>>) {
+        // Go over all the keys
+        val keys = entries.keys.sorted()
+        // Double Arrays
+        val xDoubles = mutableListOf<Long>()
+        val yDoubles = mutableListOf<Double>()
+
+        // Calculate the total series
+        keys.forEach {key ->
+            xDoubles.add(key)
+            yDoubles.add(entries[key]!!["total"]!!.mean)
+        }
+
+        // Create Chart
+        val chart = XYChartBuilder()
+            .width(1024)
+            .height(768)
+            .title("Execution Graph")
+            .xAxisTitle("Time (ms)")
+            .yAxisTitle("Milliseconds").build()
+
+        // Customize Chart
+        chart.styler.legendPosition = LegendPosition.InsideNW
+        chart.styler.defaultSeriesRenderStyle = XYSeriesRenderStyle.Area
+        chart.styler.yAxisLabelAlignment = Styler.TextAlignment.Right
+        chart.styler.yAxisDecimalPattern = "#,###.## ms"
+        chart.styler.isYAxisLogarithmic = true;
+        chart.styler.plotMargin = 0
+        chart.styler.plotContentSize = .95
+
+        // Data per field
+        val dataByStep = mutableMapOf<String, Pair<MutableList<Long>, MutableList<Double>>>()
+
+        // Generate series for each step
+        keys.forEach { key ->
+            entries[key]!!.entries.forEach {
+                if (!dataByStep.containsKey(it.key)) {
+                    dataByStep[it.key] = Pair(mutableListOf(), mutableListOf())
+                }
+
+                dataByStep[it.key]!!.first.add(key)
+                dataByStep[it.key]!!.second.add(it.value.mean)
+            }
+        }
+
+        // Add series to graph
+        dataByStep.forEach {
+            val series = chart.addSeries(it.key, it.value.first, it.value.second)
+            series.xySeriesRenderStyle = XYSeries.XYSeriesRenderStyle.Area
+            series.marker = SeriesMarkers.NONE
+        }
+
+        // Save it
+        BitmapEncoder.saveBitmap(chart, "./Sample_Chart", BitmapFormat.PNG)
+
+        // or save it in high-res
+        BitmapEncoder.saveBitmapWithDPI(chart, "./Sample_Chart_300_DPI", BitmapFormat.PNG, 300)
+    }
 }

@@ -1,86 +1,80 @@
 package com.mtools.schemasimulator.cli.workers
 
+import com.beust.klaxon.Klaxon
 import com.mtools.schemasimulator.cli.MasterExecutorConfig
-import com.mtools.schemasimulator.clients.WebSocketConnectionClient
+import com.mtools.schemasimulator.logger.postMessage
 import com.mtools.schemasimulator.messages.master.Configure
+import com.mtools.schemasimulator.messages.master.ConfigureErrorResponse
+import com.mtools.schemasimulator.messages.master.ConfigureResponse
 import com.mtools.schemasimulator.messages.master.Stop
 import com.mtools.schemasimulator.messages.master.Tick
 import mu.KLogging
+import org.apache.http.client.utils.URIBuilder
 import java.net.URI
 import java.util.*
+import java.io.InputStreamReader
 
-class RemoteWorker(private val name: String, private val config: MasterExecutorConfig): Worker {
-    private val configureReplyMessage = """method"\s*:\s*"configure"""".toRegex()
-    private val stopReplyMessage = """method"\s*:\s*"stop"""".toRegex()
-    private val metricsMessage = """method"\s*:\s*"metrics"""".toRegex()
-    private var client: WebSocketConnectionClient? = null
-    var initialized = false
-    var stopped = false
 
-    // Websocket onOpen method
-    private val onOpen: (c: WebSocketConnectionClient) -> Unit = fun(c: WebSocketConnectionClient) {
-        client = c
-    }
+class RemoteWorker(
+    private val name: String,
+    private val config: MasterExecutorConfig
+): Worker {
+    private var uri: URI? = null
 
-    // Websocket onMessage
-    private val onMessage: (client: WebSocketConnectionClient, message: String?) -> Unit = fun(_: WebSocketConnectionClient, message: String?) {
-        logger.info { "onMessage [$message]" }
-
-        // Process the replies
-        if (message != null) {
-            if (message.contains(configureReplyMessage)) {
-                initialized = true
-            } else if (message.contains(stopReplyMessage)) {
-                stopped = true
-            } else if (message.contains(metricsMessage)){
-                println("== received metrics message")
-            }
-        }
-    }
+    private val responseOk = """ok"\s*:\s*true""".toRegex()
+    private var stopped = false
 
     override fun ready() {
-        while(client == null) {
+        while(uri == null) {
             Thread.sleep(10)
         }
     }
 
     override fun init() {
-        // Fire the init message
-        client!!.send(Configure(name, String(Base64.getEncoder().encode(config.config.toByteArray()))))
+        // Execute request
+        val response = postMessage(uri!!, "/configure", Klaxon().toJsonString(Configure(name, String(Base64.getEncoder().encode(config.config.toByteArray())))))
+        // Did we get a valid response
+        if (response.statusLine.statusCode == 200) {
+            val body = InputStreamReader(response.entity.content).readText()
 
-        // Wait for the response before we are done
-        while (!initialized) {
-            Thread.sleep(10)
+            if (body.contains(responseOk)) {
+                val response = Klaxon().parse<ConfigureResponse>(body)
+                println()
+            } else {
+                val errorResponse = Klaxon().parse<ConfigureErrorResponse>(body)
+                println()
+            }
         }
     }
 
     override fun tick(time: Long) {
-        client!!.send(Tick(time))
+        logger.debug { "[$time] tick sent to $uri" }
+        postMessage(uri!!, "/tick", Klaxon().toJsonString(Tick(time)))
     }
 
     override fun stop() {
-        // Fire the init message
-        client!!.send(Stop(name))
+        // Post the stop message
+        postMessage(uri!!, "/stop", Klaxon().toJsonString(Stop()))
 
-        // Wait for the response before we are done
         while (!stopped) {
-            Thread.sleep(10)
+            Thread.sleep(100)
         }
+    }
 
-        // Shutdown the webclient
-        client!!.disconnect()
+    fun done() {
+        stopped = true
     }
 
     fun assign(host: String, port: Int) {
-        var localClient = WebSocketConnectionClient(
-            URI.create("http://$host:$port"),
-            config.maxReconnectAttempts,
-            config.waitMSBetweenReconnectAttempts,
-            onOpen,
-            onMessage)
+        uri = URIBuilder()
+            .setScheme("http")
+            .setHost(host)
+            .setPort(port)
+            .build()
+    }
 
-        // Start connection
-        localClient.connect()
+    fun equalsHostPort(host: String, port: Int): Boolean {
+        return uri!!.host == host && uri!!.port == port
     }
 
     companion object : KLogging()
