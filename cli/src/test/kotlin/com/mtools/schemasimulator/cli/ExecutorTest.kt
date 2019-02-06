@@ -3,6 +3,7 @@ package com.mtools.schemasimulator.cli
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
 import kotlin.test.assertEquals
@@ -23,9 +24,11 @@ class ExecutorTest {
     fun correctlyExecuteMasterWorkerConfig() {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(
-            true,
-            URI.create("http://127.0.0.1:14500"),
-            InputStreamReader(ClassLoader.getSystemResourceAsStream("remote/SimpleRemoteScenario.kt")).readText()
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("remote/SimpleRemoteScenario.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/SimpleRemoteScenario.png"),
+            graphOutputDPI = 300
         ))
 
         // Setup two worker Executors

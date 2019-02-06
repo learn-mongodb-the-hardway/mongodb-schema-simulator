@@ -66,9 +66,11 @@ object App : KLogging() {
             ))
         } else {
             MasterExecutor(MasterExecutorConfig(
-                config.general.master,
-                URI("http://${config.general.host}:${config.general.port}"),
-                InputStreamReader(stream).readText()
+                master=config.general.master,
+                uri=URI("http://${config.general.host}:${config.general.port}"),
+                config=InputStreamReader(stream).readText(),
+                graphOutputDPI = config.general.dpi,
+                graphOutputFilePath = config.general.outputFilePath!!
             ))
         }
     }

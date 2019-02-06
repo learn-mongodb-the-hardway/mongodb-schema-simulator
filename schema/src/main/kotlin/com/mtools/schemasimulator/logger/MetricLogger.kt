@@ -34,11 +34,11 @@ class LocalMetricLogger() : MetricLogger {
     override fun flush() {}
 }
 
-class RemoteMetricLogger(val name: String, val uri: URI, val cutOff: Int = 500) : MetricLogger {
+class RemoteMetricLogger(val name: String, val masterURI: URI, val uri: URI, val cutOff: Int = 500) : MetricLogger {
     private var logEntries = CopyOnWriteArrayList<LogEntry>()
 
     override fun flush() {
-        postMessage(uri, "/metrics", Klaxon().toJsonString(MetricsResult(logEntries)))
+        postMessage(masterURI, "/metrics", Klaxon().toJsonString(MetricsResult(uri.host, uri.port, logEntries)))
     }
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
@@ -52,7 +52,7 @@ class RemoteMetricLogger(val name: String, val uri: URI, val cutOff: Int = 500) 
                 // Empty the list
                 logEntries = CopyOnWriteArrayList()
                 // Send a metrics message
-                postMessage(uri, "/metrics", Klaxon().toJsonString(MetricsResult(list)))
+                postMessage(masterURI, "/metrics", Klaxon().toJsonString(MetricsResult(uri.host, uri.port, list)))
             }
 
             return logEntry

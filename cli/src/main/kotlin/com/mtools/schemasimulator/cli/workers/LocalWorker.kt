@@ -8,14 +8,13 @@ class LocalWorker(
     private val mongoClient: MongoClient,
     private val pattern: LoadPattern
 ): Worker {
+    override fun start(numberOfTicks: Long, tickResolution: Long) {
+    }
+
     override fun ready() {}
 
     override fun init() {
         pattern.init(mongoClient)
-    }
-
-    override fun tick(time: Long) {
-        pattern.tick(time)
     }
 
     override fun stop() {

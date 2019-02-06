@@ -22,6 +22,8 @@ class ConfigureErrorResponse(id: Long, message: String, errorCode: Int) : Method
 
 class Tick(val time: Long) : MethodCall("tick")
 
+class Start(val numberOfTicks: Long, val tickResolution: Long) : MethodCall("start")
+
 class Stop : MethodCall("stop")
 
 class Done(val host: String, val port: Int) : MethodCall("done")

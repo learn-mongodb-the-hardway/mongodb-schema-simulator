@@ -6,8 +6,8 @@ import com.mtools.schemasimulator.logger.postMessage
 import com.mtools.schemasimulator.messages.master.Configure
 import com.mtools.schemasimulator.messages.master.ConfigureErrorResponse
 import com.mtools.schemasimulator.messages.master.ConfigureResponse
+import com.mtools.schemasimulator.messages.master.Start
 import com.mtools.schemasimulator.messages.master.Stop
-import com.mtools.schemasimulator.messages.master.Tick
 import mu.KLogging
 import org.apache.http.client.utils.URIBuilder
 import java.net.URI
@@ -38,7 +38,7 @@ class RemoteWorker(
             val body = InputStreamReader(response.entity.content).readText()
 
             if (body.contains(responseOk)) {
-                val response = Klaxon().parse<ConfigureResponse>(body)
+                val responseObject = Klaxon().parse<ConfigureResponse>(body)
                 println()
             } else {
                 val errorResponse = Klaxon().parse<ConfigureErrorResponse>(body)
@@ -47,15 +47,14 @@ class RemoteWorker(
         }
     }
 
-    override fun tick(time: Long) {
-        logger.debug { "[$time] tick sent to $uri" }
-        postMessage(uri!!, "/tick", Klaxon().toJsonString(Tick(time)))
+    override fun start(numberOfTicks: Long, tickResolution: Long) {
+        logger.debug { "start sent to $uri" }
+        postMessage(uri!!, "/start", Klaxon().toJsonString(Start(numberOfTicks, tickResolution)))
     }
 
     override fun stop() {
-        // Post the stop message
-        postMessage(uri!!, "/stop", Klaxon().toJsonString(Stop()))
-
+//        // Post the stop message
+//        postMessage(masterURI!!, "/stop", Klaxon().toJsonString(Stop()))
         while (!stopped) {
             Thread.sleep(100)
         }

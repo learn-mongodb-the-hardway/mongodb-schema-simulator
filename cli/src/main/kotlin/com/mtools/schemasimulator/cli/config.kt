@@ -38,30 +38,40 @@ class GeneralConfig(parser: ArgParser) {
             }
         }
 
+    val outputFilePath by parser.storing("--outputFilePath", help = "General: the graph output file") {
+            // Value must be set
+            if (this == null) {
+                throw SystemExitException("option '--outputFilePath must be specified'", 2)
+            }
+
+            File(this)
+        }
+        .default(null)
+
     val worker by parser.flagging("--worker", help = "Instance is a worker instance").default(false)
 
     val master by parser.flagging("--master", help = "Instance is a master instance").default(false)
 
-    val masterURI = parser.storing("--master-uri", help = "Connection: master <host:port> connection, example [--master-uri localhost:15440]")
+    val masterURI = parser.storing("--master-masterURI", help = "Connection: master <host:port> connection, example [--master-masterURI localhost:15440]")
         .default(null)
         .addValidator {
             // Value must be set
             if (value == null && worker) {
-                throw SystemExitException("option '--master-uri must be specified if worker is set'", 2)
+                throw SystemExitException("option '--master-masterURI must be specified if worker is set'", 2)
             }
 
-            // Validate the connection uri passed in
+            // Validate the connection masterURI passed in
             if (worker) {
                 val parts = value!!.split(":")
                 if (parts.size < 2) {
-                    throw SystemExitException("option 'master-uri must be of the format <host:port>'", 2)
+                    throw SystemExitException("option 'master-masterURI must be of the format <host:port>'", 2)
                 }
 
                 // Check if we can parse the port
                 try {
                     parts[1].toInt()
                 } catch(ex: Exception) {
-                    throw SystemExitException("option 'master-uri port provided is not a number'", 2)
+                    throw SystemExitException("option 'master-masterURI port provided is not a number'", 2)
                 }
             }
         }
@@ -73,6 +83,15 @@ class GeneralConfig(parser: ArgParser) {
                 throw SystemExitException("option --port must be specified", 2)
             }
         }
+
+    val dpi by parser.storing("--dpi", help = "General: The Graph Output DPI") {
+            try {
+                this!!.toInt()
+            } catch (ex: Exception) {
+                throw SystemExitException("option '--dpi provided is not a number'", 2)
+            }
+        }
+        .default(300)
 
     val port by parser.storing("-p", "--port", help = "General: The host we are binding too")
         .default(null)

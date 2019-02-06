@@ -16,13 +16,12 @@ import com.mtools.schemasimulator.messages.master.Configure
 import com.mtools.schemasimulator.messages.master.ConfigureErrorResponse
 import com.mtools.schemasimulator.messages.master.ConfigureResponse
 import com.mtools.schemasimulator.messages.master.Done
+import com.mtools.schemasimulator.messages.master.Start
 import com.mtools.schemasimulator.messages.master.Stop
-import com.mtools.schemasimulator.messages.master.Tick
 import mu.KLogging
 import spark.kotlin.Http
 import spark.kotlin.RouteHandler
 import spark.kotlin.ignite
-import spark.kotlin.options
 import java.lang.Exception
 import javax.script.ScriptEngineManager
 import javax.script.SimpleScriptContext
@@ -49,7 +48,7 @@ class WorkerServer(val config: WorkerExecutorConfig) {
         // Create context
         val context = SimpleScriptContext()
 
-        logger.info { "[$name]: received config message, setup worker executor" }
+        logger.info { "[$name:${config.uri}]: received config message, setup worker executor" }
 
         // Load the scenario
         engine.eval(configure.configString, context)
@@ -58,7 +57,7 @@ class WorkerServer(val config: WorkerExecutorConfig) {
         val result = engine.eval("configure()", context)
 
         // Set the logger
-        val metricLogger = RemoteMetricLogger(configure.name, config.masterURI)
+        val metricLogger = RemoteMetricLogger(configure.name, config.masterURI, config.uri)
 
         // Ensure the image
         if (result is Config) {
@@ -78,7 +77,7 @@ class WorkerServer(val config: WorkerExecutorConfig) {
                         mongoClient.listDatabaseNames().first()
                         mongoClients[configure.name] = mongoClient
                     } catch(ex: MongoException) {
-                        logger.error { "[$name]: Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}"}
+                        logger.error { "[$name]: Failed to connect to MongoDB with masterURI [${result.mongo.url}, ${ex.message}"}
                         return Klaxon().toJsonString(ConfigureErrorResponse(configure.id, "[$name]: MongoClient failed to connect", 2))
                     }
                 }
@@ -114,32 +113,47 @@ class WorkerServer(val config: WorkerExecutorConfig) {
 
     fun start() {
         http.post("/configure", "application/json") {
-            logger.info("========================= /configure")
             handleConfigure(this)
         }
 
-        http.post("/tick") {
-            logger.info("========================= /tick")
-            handleTick(this)
-        }
-
-        http.post("/stop") {
-            logger.info("========================= /stop")
-            handleStop(this)
+        http.post("/start") {
+            handleStart(this)
         }
 
         http.service.awaitInitialization()
     }
 
-    private fun handleStop(routeHandler: RouteHandler): Any {
+    private fun handleStart(routeHandler: RouteHandler): Any {
         val body = routeHandler.request.body()
         body ?: return ""
 
-        val stop = Klaxon().parse<Stop>(body)
-        stop ?: return ""
+        val start = Klaxon().parse<Start>(body)
+        start ?: return ""
 
-        // Wait for workers to finish
+        logger.info { "[$name]: received start message: numberOfTicks={start.numberOfTicks}, tickResolution=${start.tickResolution}" }
+
+        // Run the work
         Thread {
+            // Execute our ticker program
+            var currentTick = 0
+            var currentTime = 0L
+
+            // Run for the number of tickets we are expecting
+            while (currentTick < start.numberOfTicks) {
+                // Send a tick to each worker
+                localWorkers.values.forEach {
+                    it.tick(currentTime)
+                }
+
+                // Wait for the resolution time
+                Thread.sleep(start.tickResolution)
+
+                // Update the current ticker and time
+                currentTick += 1
+                currentTime += start.tickResolution
+            }
+
+            // Wait for work to finish
             // For each ticker tick a tick
             localWorkers.forEach { key, value ->
                 logger.info { "[$name]: executing stop message for: [$key]" }
@@ -147,7 +161,7 @@ class WorkerServer(val config: WorkerExecutorConfig) {
             }
 
             // Send the worker done
-            val response = postMessage(config.masterURI, "/worker/done", Klaxon().toJsonString(Done(config.uri.host, config.uri.port)))
+            postMessage(config.masterURI, "/worker/done", Klaxon().toJsonString(Done(config.uri.host, config.uri.port)))
 
             // Shut down http server
             http.stop()
@@ -156,23 +170,6 @@ class WorkerServer(val config: WorkerExecutorConfig) {
                 u.close()
             }
         }.start()
-
-        return ""
-    }
-
-    private fun handleTick(routeHandler: RouteHandler): Any {
-        val body = routeHandler.request.body()
-        body ?: return ""
-
-        val tick = Klaxon().parse<Tick>(body)
-        tick ?: return ""
-
-        logger.debug { "[$name]: received tick message: ${tick.time}" }
-
-        // For each ticker tick a tick
-        localWorkers.values.forEach {
-            it.tick(tick.time)
-        }
 
         return ""
     }

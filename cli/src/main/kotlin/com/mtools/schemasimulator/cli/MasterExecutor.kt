@@ -29,12 +29,15 @@ import org.knowm.xchart.style.markers.SeriesMarkers
 import org.knowm.xchart.style.Styler
 import org.knowm.xchart.XYSeries.XYSeriesRenderStyle
 import org.knowm.xchart.style.Styler.LegendPosition
+import java.io.File
 
 data class MasterExecutorConfig (
     val master: Boolean,
     val uri: URI?,
     val config: String,
     val maxReconnectAttempts: Int = 30,
+    val graphOutputFilePath: File,
+    val graphOutputDPI: Int = 300,
     val waitMSBetweenReconnectAttempts: Long = 1000)
 
 class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
@@ -70,8 +73,8 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             mongoClient = MongoClient(MongoClientURI(result.mongo.url))
             mongoClient.listDatabaseNames().first()
         } catch(ex: MongoException) {
-            logger.error { "Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}"}
-            throw SystemExitException("Failed to connect to MongoDB with uri [${result.mongo.url}, ${ex.message}", 2)
+            logger.error { "Failed to connect to MongoDB with masterURI [${result.mongo.url}, ${ex.message}"}
+            throw SystemExitException("Failed to connect to MongoDB with masterURI [${result.mongo.url}, ${ex.message}", 2)
         }
 
         // Metric logger
@@ -117,23 +120,9 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             it.init()
         }
 
-        // Execute our ticker program
-        var currentTick = 0
-        var currentTime = 0L
-
-        // Run for the number of tickets we are expecting
-        while (currentTick < result.coordinator.runForNumberOfTicks) {
-            // Send a tick to each worker
-            workers.forEach {
-                it.tick(currentTime)
-            }
-
-            // Wait for the resolution time
-            Thread.sleep(result.coordinator.tickResolutionMiliseconds)
-
-            // Update the current ticker and time
-            currentTick += 1
-            currentTime += result.coordinator.tickResolutionMiliseconds
+        // Start the workers
+        workers.forEach {
+            it.start(result.coordinator.runForNumberOfTicks, result.coordinator.tickResolutionMiliseconds)
         }
 
         logger.info { "Stopping workers" }
@@ -158,7 +147,7 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         logger.info { "Starting generation of graph" }
 
         // Generate a graph
-        GraphGenerator().generate(metricsAggregator.metrics)
+        GraphGenerator(config.graphOutputFilePath, config.graphOutputDPI).generate(metricsAggregator.metrics)
 
         logger.info { "Finished executing simulation, terminating" }
     }
@@ -166,7 +155,7 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
     companion object : KLogging()
 }
 
-class GraphGenerator() {
+class GraphGenerator(private val outputPath: File, private val dpi: Int) {
     fun generate(entries: MutableMap<Long, MutableMap<String, SummaryStatistics>>) {
         // Go over all the keys
         val keys = entries.keys.sorted()
@@ -193,6 +182,7 @@ class GraphGenerator() {
         chart.styler.defaultSeriesRenderStyle = XYSeriesRenderStyle.Area
         chart.styler.yAxisLabelAlignment = Styler.TextAlignment.Right
         chart.styler.yAxisDecimalPattern = "#,###.## ms"
+        chart.styler.xAxisDecimalPattern = "#,###.## ms"
         chart.styler.isYAxisLogarithmic = true;
         chart.styler.plotMargin = 0
         chart.styler.plotContentSize = .95
@@ -219,10 +209,7 @@ class GraphGenerator() {
             series.marker = SeriesMarkers.NONE
         }
 
-        // Save it
-        BitmapEncoder.saveBitmap(chart, "./Sample_Chart", BitmapFormat.PNG)
-
         // or save it in high-res
-        BitmapEncoder.saveBitmapWithDPI(chart, "./Sample_Chart_300_DPI", BitmapFormat.PNG, 300)
+        BitmapEncoder.saveBitmapWithDPI(chart, outputPath.absolutePath, BitmapFormat.PNG, dpi)
     }
 }

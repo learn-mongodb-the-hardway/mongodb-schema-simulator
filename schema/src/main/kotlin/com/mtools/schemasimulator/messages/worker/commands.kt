@@ -6,6 +6,6 @@ import com.mtools.schemasimulator.messages.MethodResponse
 
 data class Register(val host: String, val port: Int) : MethodCall("register")
 
-data class MetricsResult(val ticks: List<LogEntry>) : MethodCall("metrics")
+data class MetricsResult(val host: String, val port: Int, val ticks: List<LogEntry>) : MethodCall("metrics")
 
 class StopResponse(id: Long) : MethodResponse("stop", id)

@@ -14,7 +14,10 @@ import spark.kotlin.ignite
 import java.io.StringReader
 import java.util.concurrent.LinkedBlockingDeque
 
-class MasterExecutorServer(val config: MasterExecutorConfig, val metricsAggregator: MetricsAggregator) {
+class MasterExecutorServer(
+    private val config: MasterExecutorConfig,
+    private val metricsAggregator: MetricsAggregator
+) {
     lateinit var nonInitializedWorkers: LinkedBlockingDeque<RemoteWorker>
     var workers = LinkedBlockingDeque<RemoteWorker>()
 
@@ -23,7 +26,7 @@ class MasterExecutorServer(val config: MasterExecutorConfig, val metricsAggregat
             .port(config.uri!!.port)
 
         http.post("/register") {
-            logger.info("========================= /register")
+            logger.info("/register ${config.uri}")
             // Attempt to grab the first worker
             val worker = nonInitializedWorkers.takeFirst()
 
@@ -38,12 +41,10 @@ class MasterExecutorServer(val config: MasterExecutorConfig, val metricsAggregat
         }
 
         http.post("/metrics") {
-            logger.info("========================= /metrics")
             handleMetrics(this)
         }
 
         http.post("/worker/done") {
-            logger.info("========================= /worker/done")
             handleDone(this)
         }
 
@@ -58,6 +59,11 @@ class MasterExecutorServer(val config: MasterExecutorConfig, val metricsAggregat
         val metrics = Klaxon().parseJsonObject(StringReader(body))
         // Get the ticks
         val ticks = metrics.array<JsonObject>("ticks")!!
+
+        logger.info("metrics received [${metrics.string("host")}:${metrics.int("port")}]:[Max Tick:${ticks.map {
+            it.int("tick")!!
+        }.max()}]")
+
         // Process the ticks
         metricsAggregator.processTicks(ticks)
 
@@ -70,6 +76,8 @@ class MasterExecutorServer(val config: MasterExecutorConfig, val metricsAggregat
 
         val done = Klaxon().parse<Done>(body)
         done ?: return ""
+
+        logger.info("/worker done [${done.host}:${done.port}]")
 
         // Locate the worker and signal done
         workers.forEach { worker ->
