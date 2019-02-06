@@ -17,20 +17,11 @@ import com.mtools.schemasimulator.logger.LocalMetricLogger
 import com.mtools.schemasimulator.logger.MetricLogger
 import com.xenomachina.argparser.SystemExitException
 import mu.KLogging
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.jetbrains.kotlin.script.jsr223.KotlinJsr223JvmLocalScriptEngine
 import java.net.URI
 import java.util.concurrent.LinkedBlockingDeque
 import javax.script.ScriptEngineManager
 import javax.script.SimpleScriptContext
-import org.knowm.xchart.BitmapEncoder.BitmapFormat
-import org.knowm.xchart.BitmapEncoder
-import org.knowm.xchart.XYChartBuilder
-import org.knowm.xchart.XYSeries
-import org.knowm.xchart.style.markers.SeriesMarkers
-import org.knowm.xchart.style.Styler
-import org.knowm.xchart.XYSeries.XYSeriesRenderStyle
-import org.knowm.xchart.style.Styler.LegendPosition
 import java.io.File
 
 data class MasterExecutorConfig (
@@ -40,7 +31,9 @@ data class MasterExecutorConfig (
     val maxReconnectAttempts: Int = 30,
     val graphOutputFilePath: File,
     val graphOutputDPI: Int = 300,
-    val waitMSBetweenReconnectAttempts: Long = 1000)
+    val waitMSBetweenReconnectAttempts: Long = 1000,
+    val configurationMethod: String = "configure",
+    val graphFilters: List<String> = listOf())
 
 class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
     private val metricsAggregator = MetricsAggregator()
@@ -68,7 +61,7 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         }
 
         // Attempt to invoke simulation
-        val result = engine.eval("configure()", context) as? Config ?: throw Exception("Configuration file must contain a config {} section at the end")
+        val result = engine.eval("${config.configurationMethod}()", context) as? Config ?: throw Exception("Configuration file must contain a config {} section at the end")
 
         // Use the config to build out object structure
         try {
@@ -160,7 +153,12 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         logger.info { "Starting generation of graph" }
 
         // Generate a graph
-        GraphGenerator(config.graphOutputFilePath, config.graphOutputDPI).generate(metricsAggregator.metrics)
+        GraphGenerator(
+            simulations.values.first().javaClass.simpleName,
+            config.graphOutputFilePath,
+            config.graphOutputDPI,
+            config.graphFilters
+        ).generate(metricsAggregator.metrics)
 
         logger.info { "Finished executing simulation, terminating" }
     }

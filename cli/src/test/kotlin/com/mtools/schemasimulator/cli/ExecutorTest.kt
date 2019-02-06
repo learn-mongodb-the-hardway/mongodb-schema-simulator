@@ -35,6 +35,28 @@ class ExecutorTest {
 
     @Test
     @Disabled
+    fun executeTransaction() {
+        // Setup master
+        val executor = MasterExecutor(MasterExecutorConfig(
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/TransactionScenario.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/TransactionScenario.png"),
+            graphOutputDPI = 300,
+            configurationMethod = "configureTransactions",
+            graphFilters = listOf("total")
+        ))
+
+        val masterThread = Thread(Runnable {
+            executor.start()
+        })
+
+        masterThread.start()
+        masterThread.join()
+    }
+
+    @Test
+    @Disabled
     fun correctlyExecuteMasterWorkerConfig() {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(

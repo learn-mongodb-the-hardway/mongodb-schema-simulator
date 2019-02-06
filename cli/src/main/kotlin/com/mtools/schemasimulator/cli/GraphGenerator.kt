@@ -8,7 +8,7 @@ import org.knowm.xchart.style.Styler
 import org.knowm.xchart.style.markers.SeriesMarkers
 import java.io.File
 
-class GraphGenerator(private val outputPath: File, private val dpi: Int) {
+class GraphGenerator(private val name:String, private val outputPath: File, private val dpi: Int, private val filters: List<String> = listOf()) {
     fun generate(entries: MutableMap<Long, MutableMap<String, SummaryStatistics>>) {
         // Go over all the keys
         val keys = entries.keys.sorted()
@@ -26,7 +26,7 @@ class GraphGenerator(private val outputPath: File, private val dpi: Int) {
         val chart = XYChartBuilder()
             .width(1024)
             .height(768)
-            .title("Execution Graph")
+            .title("Execution Graph for: $name")
             .xAxisTitle("Time (ms)")
             .yAxisTitle("Milliseconds").build()
 
@@ -45,7 +45,11 @@ class GraphGenerator(private val outputPath: File, private val dpi: Int) {
 
         // Generate series for each step
         keys.forEach { key ->
-            entries[key]!!.entries.forEach {
+            entries[key]!!
+                .entries
+                .filter { filters.isEmpty() || filters.contains(it.key) }
+                .forEach {
+
                 if (!dataByStep.containsKey(it.key)) {
                     dataByStep[it.key] = Pair(mutableListOf(), mutableListOf())
                 }

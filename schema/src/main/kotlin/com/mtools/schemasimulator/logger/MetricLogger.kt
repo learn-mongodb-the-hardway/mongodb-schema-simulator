@@ -37,7 +37,7 @@ class LocalMetricLogger(
 
             if (logEntries.size == cutOff) {
                 // Get a reference
-                val list = logEntries
+                val list = logEntries.toList()
                 // Empty the list
                 logEntries = CopyOnWriteArrayList()
                 // Send a metrics message
@@ -54,7 +54,7 @@ class LocalMetricLogger(
 
     override fun flush() {
         // Get a reference
-        val list = logEntries
+        val list = logEntries.toList()
         // Empty the list
         logEntries = CopyOnWriteArrayList()
         // Process remaining ticks

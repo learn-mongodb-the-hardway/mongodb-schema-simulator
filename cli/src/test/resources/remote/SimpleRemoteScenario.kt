@@ -99,13 +99,13 @@ class SimpleSimulation(seedUserId: Int = 1,
     }
 }
 
-val tickResolution = 1L
+fun configure() : Config {
+    val tickResolution = 1L
 //val numberOfTicks = 300L
 //val numberOfTicks = 3000L
-val numberOfTicks = 30000L
+    val numberOfTicks = 30000L
 //val numberOfTicks = 30000L * 2 * 3
 
-fun configure() : Config {
     return config {
         mongodb {
 //            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")

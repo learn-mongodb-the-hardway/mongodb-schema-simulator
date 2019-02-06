@@ -254,7 +254,7 @@ class Transaction(
     /*
      * Reverse the transactions on the current account if it exists
      */
-    fun reverse() = log("reverse") {
+    private fun reverse() = log("reverse") {
         // Reverse the debit
         accounts.updateOne(Document(mapOf(
             "name" to fromAccount.name,
@@ -289,7 +289,7 @@ class Transaction(
         cancel()
     }
 
-    fun cancel() = log("cancel") {
+    private fun cancel() = log("cancel") {
         val result = transactions.updateOne(Document(mapOf(
             "_id" to id
         )), Document(mapOf(
@@ -304,7 +304,7 @@ class Transaction(
         }
     }
 
-    fun advance() = log("advance") {
+    private fun advance() = log("advance") {
         state = when (state) {
             TransactionStates.INITIAL -> {
                 val result = transactions.updateOne(Document(mapOf(
