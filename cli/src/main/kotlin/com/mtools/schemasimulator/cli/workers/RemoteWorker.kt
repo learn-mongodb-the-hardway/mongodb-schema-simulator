@@ -53,8 +53,6 @@ class RemoteWorker(
     }
 
     override fun stop() {
-//        // Post the stop message
-//        postMessage(masterURI!!, "/stop", Klaxon().toJsonString(Stop()))
         while (!stopped) {
             Thread.sleep(100)
         }

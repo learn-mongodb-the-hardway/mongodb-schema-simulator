@@ -2,6 +2,7 @@ package com.mtools.schemasimulator.cli
 
 import com.mongodb.MongoClient
 import com.mongodb.MongoClientURI
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.InputStreamReader
@@ -13,14 +14,27 @@ import kotlin.test.assertTrue
 class ExecutorTest {
 
     @Test
+    @Disabled
     fun correctlyParseLocalConfig() {
-//        val stream = ClassLoader.getSystemResourceAsStream("SimpleScenario.kt")
-//        val executor = MasterExecutor(InputStreamReader(stream))
-//        executor.start()
-//        println()
+        // Setup master
+        val executor = MasterExecutor(MasterExecutorConfig(
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/SimpleScenario.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/SimpleScenario.png"),
+            graphOutputDPI = 300
+        ))
+
+        val masterThread = Thread(Runnable {
+            executor.start()
+        })
+
+        masterThread.start()
+        masterThread.join()
     }
 
     @Test
+    @Disabled
     fun correctlyExecuteMasterWorkerConfig() {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(

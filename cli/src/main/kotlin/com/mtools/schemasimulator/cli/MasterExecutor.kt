@@ -7,12 +7,14 @@ import com.mtools.schemasimulator.cli.config.Config
 import com.mtools.schemasimulator.cli.config.ConstantConfig
 import com.mtools.schemasimulator.cli.config.LocalConfig
 import com.mtools.schemasimulator.cli.config.RemoteConfig
-import com.mtools.schemasimulator.cli.workers.LocalWorker
-import com.mtools.schemasimulator.cli.workers.MetricsAggregator
+import com.mtools.schemasimulator.cli.workers.LocalWorkerFacade
+import com.mtools.schemasimulator.logger.MetricsAggregator
 import com.mtools.schemasimulator.cli.workers.RemoteWorker
+import com.mtools.schemasimulator.executor.Simulation
 import com.mtools.schemasimulator.executor.ThreadedSimulationExecutor
 import com.mtools.schemasimulator.load.Constant
 import com.mtools.schemasimulator.logger.LocalMetricLogger
+import com.mtools.schemasimulator.logger.MetricLogger
 import com.xenomachina.argparser.SystemExitException
 import mu.KLogging
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
@@ -77,27 +79,35 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             throw SystemExitException("Failed to connect to MongoDB with masterURI [${result.mongo.url}, ${ex.message}", 2)
         }
 
-        // Metric logger
-        val metricLogger = LocalMetricLogger()
+        // Metric loggers
+        val metricLoggers = mutableListOf<MetricLogger>()
+        val simulations = mutableMapOf<String, Simulation>()
 
         // For all executors processes wait
         val workers = result.coordinator.tickers.map {
             when (it) {
                 is RemoteConfig -> {
+                    // Add simulation
+                    simulations[it.simulation.javaClass.name] = it.simulation
+                    // Create remote worker
                     RemoteWorker(it.name, config)
                 }
 
                 is LocalConfig -> {
-                    LocalWorker(it.name, mongoClient, when (it.loadPatternConfig) {
+                    simulations[it.simulation.javaClass.name] = it.simulation
+                    // Metric logger
+                    metricLoggers += LocalMetricLogger(it.name, metricsAggregator)
+                    // Return the local worker facade
+                    LocalWorkerFacade(it.name, mongoClient, when (it.loadPatternConfig) {
                         is ConstantConfig -> {
                             Constant(
-                                ThreadedSimulationExecutor(it.simulation, metricLogger, it.name),
+                                ThreadedSimulationExecutor(it.simulation, metricLoggers.last(), it.name),
                                 it.loadPatternConfig.numberOfCExecutions,
                                 it.loadPatternConfig.executeEveryMilliseconds
                             )
                         }
                         else -> throw Exception("Unknown LoadPattern Config Object")
-                    })
+                    }, metricLoggers.last())
                 }
 
                 else -> throw Exception("Unknown Worker Config")
@@ -115,7 +125,13 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             it.ready()
         }
 
-        // Once all worker are ready initialize them
+        // Initialize all the simulations one
+        simulations.values.forEach {
+            logger.info { "calling init on simulation [${it.javaClass.simpleName}]" }
+            it.init(mongoClient)
+        }
+
+        // Init workers if needed
         workers.forEach {
             it.init()
         }
@@ -141,9 +157,6 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             thread.join()
         }
 
-        // Merge all the data
-        metricsAggregator.processTicks(metricLogger.logEntries)
-
         logger.info { "Starting generation of graph" }
 
         // Generate a graph
@@ -153,63 +166,4 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
     }
 
     companion object : KLogging()
-}
-
-class GraphGenerator(private val outputPath: File, private val dpi: Int) {
-    fun generate(entries: MutableMap<Long, MutableMap<String, SummaryStatistics>>) {
-        // Go over all the keys
-        val keys = entries.keys.sorted()
-        // Double Arrays
-        val xDoubles = mutableListOf<Long>()
-        val yDoubles = mutableListOf<Double>()
-
-        // Calculate the total series
-        keys.forEach {key ->
-            xDoubles.add(key)
-            yDoubles.add(entries[key]!!["total"]!!.mean)
-        }
-
-        // Create Chart
-        val chart = XYChartBuilder()
-            .width(1024)
-            .height(768)
-            .title("Execution Graph")
-            .xAxisTitle("Time (ms)")
-            .yAxisTitle("Milliseconds").build()
-
-        // Customize Chart
-        chart.styler.legendPosition = LegendPosition.InsideNW
-        chart.styler.defaultSeriesRenderStyle = XYSeriesRenderStyle.Area
-        chart.styler.yAxisLabelAlignment = Styler.TextAlignment.Right
-        chart.styler.yAxisDecimalPattern = "#,###.## ms"
-        chart.styler.xAxisDecimalPattern = "#,###.## ms"
-        chart.styler.isYAxisLogarithmic = true;
-        chart.styler.plotMargin = 0
-        chart.styler.plotContentSize = .95
-
-        // Data per field
-        val dataByStep = mutableMapOf<String, Pair<MutableList<Long>, MutableList<Double>>>()
-
-        // Generate series for each step
-        keys.forEach { key ->
-            entries[key]!!.entries.forEach {
-                if (!dataByStep.containsKey(it.key)) {
-                    dataByStep[it.key] = Pair(mutableListOf(), mutableListOf())
-                }
-
-                dataByStep[it.key]!!.first.add(key)
-                dataByStep[it.key]!!.second.add(it.value.mean)
-            }
-        }
-
-        // Add series to graph
-        dataByStep.forEach {
-            val series = chart.addSeries(it.key, it.value.first, it.value.second)
-            series.xySeriesRenderStyle = XYSeries.XYSeriesRenderStyle.Area
-            series.marker = SeriesMarkers.NONE
-        }
-
-        // or save it in high-res
-        BitmapEncoder.saveBitmapWithDPI(chart, outputPath.absolutePath, BitmapFormat.PNG, dpi)
-    }
 }

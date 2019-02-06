@@ -2,6 +2,7 @@ package com.mtools.schemasimulator.cli.servers
 
 import com.mongodb.MongoClient
 import com.mtools.schemasimulator.load.LoadPattern
+import com.mtools.schemasimulator.logger.MetricLogger
 import com.mtools.schemasimulator.logger.RemoteMetricLogger
 import kotlinx.coroutines.experimental.Job
 import mu.KLogging
@@ -11,9 +12,8 @@ class LocalWorker(
     private val name: String,
     private val mongoClient: MongoClient,
     private val pattern: LoadPattern,
-    val metricLogger: RemoteMetricLogger
+    private val metricLogger: MetricLogger
 ) {
-
     private val jobs = ConcurrentLinkedQueue<Job>()
     private var running = false
 
@@ -35,12 +35,12 @@ class LocalWorker(
     fun start() {
         running = true
         thread.start()
-        pattern.start()
+        pattern.start(mongoClient)
     }
 
     fun stop() {
         running = false
-        pattern.stop()
+        pattern.stop(mongoClient)
 
         // Wait for any lagging jobs to finish
         while (jobs.size > 0) {
@@ -52,12 +52,8 @@ class LocalWorker(
         metricLogger.flush()
     }
 
-    init {
-        pattern.init(mongoClient)
-    }
-
     fun tick(time: Long) {
-        pattern.tick(time).forEach {
+        pattern.tick(time, mongoClient).forEach {
             jobs.add(it)
         }
     }

@@ -12,25 +12,21 @@ class Constant(
 ) : LoadPattern {
     var currentTime = 0L
 
-    override fun init(client: MongoClient) {
-        executor.init(client)
+    override fun start(client: MongoClient) {
+        executor.start(client)
     }
 
-    override fun start() {
-        executor.start()
+    override fun stop(client: MongoClient) {
+        executor.stop(client)
     }
 
-    override fun stop() {
-        executor.stop()
-    }
-
-    override fun tick(time: Long) : List<Job> {
+    override fun tick(time: Long, client: MongoClient) : List<Job> {
         if ((time - currentTime) >= executeEveryMilliseconds) {
             logger.debug { "Executing Constant load pattern at $time" }
             val jobs = mutableListOf<Job>()
 
             for (i in 0 until numberOfCExecutions step 1) {
-                jobs += executor.execute(time)
+                jobs += executor.execute(time, client)
             }
 
             currentTime = time

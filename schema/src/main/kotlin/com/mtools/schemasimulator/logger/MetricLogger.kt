@@ -2,6 +2,7 @@ package com.mtools.schemasimulator.logger
 
 import com.beust.klaxon.Klaxon
 import com.mtools.schemasimulator.messages.worker.MetricsResult
+import mu.KLogging
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -22,23 +23,57 @@ class NoopLogger: MetricLogger {
     override fun createLogEntry(simulation: String, tick: Long): LogEntry = LogEntry(simulation, tick)
 }
 
-class LocalMetricLogger() : MetricLogger {
+class LocalMetricLogger(
+    private val name: String,
+    private val aggregator: MetricsAggregator,
+    private val cutOff: Int = 500
+) : MetricLogger {
     var logEntries = CopyOnWriteArrayList<LogEntry>()
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
-        val logEntry = LogEntry(simulation, tick)
-        logEntries.add(logEntry)
-        return logEntry
+        synchronized(this) {
+            val logEntry = LogEntry(simulation, tick)
+            logEntries.add(logEntry)
+
+            if (logEntries.size == cutOff) {
+                // Get a reference
+                val list = logEntries
+                // Empty the list
+                logEntries = CopyOnWriteArrayList()
+                // Send a metrics message
+                aggregator.processTicks(list)
+                // Log metrics sent
+                logger.info("metrics received [$name]:[Max Tick:${list.map {
+                    it.tick
+                }.max()}]")
+            }
+
+            return logEntry
+        }
     }
 
-    override fun flush() {}
+    override fun flush() {
+        // Get a reference
+        val list = logEntries
+        // Empty the list
+        logEntries = CopyOnWriteArrayList()
+        // Process remaining ticks
+        aggregator.processTicks(list)
+    }
+
+    companion object : KLogging()
 }
 
 class RemoteMetricLogger(val name: String, val masterURI: URI, val uri: URI, val cutOff: Int = 500) : MetricLogger {
     private var logEntries = CopyOnWriteArrayList<LogEntry>()
 
     override fun flush() {
-        postMessage(masterURI, "/metrics", Klaxon().toJsonString(MetricsResult(uri.host, uri.port, logEntries)))
+        // Get a reference
+        val list = logEntries
+        // Empty the list
+        logEntries = CopyOnWriteArrayList()
+        // Send message
+        postMessage(masterURI, "/metrics", Klaxon().toJsonString(MetricsResult(uri.host, uri.port, list)))
     }
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {

@@ -11,20 +11,20 @@ import mu.KLogging
 import kotlin.system.measureNanoTime
 
 interface SimulationExecutor {
-    fun init(client: MongoClient)
-    fun start()
-    fun execute(tick: Long) : Job
-    fun stop()
+    fun start(client: MongoClient)
+    fun execute(tick: Long, client: MongoClient) : Job
+    fun stop(client: MongoClient)
 }
 
 data class SimulationOptions(val iterations: Int = 1000)
 
 abstract class Simulation(val options: SimulationOptions = SimulationOptions()) {
     abstract fun mongodbConnection() : MongoClient
-    abstract fun beforeAll()
-    abstract fun before()
-    abstract fun after()
+    abstract fun beforeAll(client: MongoClient)
+    abstract fun before(client: MongoClient)
+    abstract fun after(client: MongoClient)
     abstract fun init(client: MongoClient)
+    abstract fun afterAll(client: MongoClient)
 
     fun execute(logger: MetricLogger = NoopLogger(), tick: Long) {
         val logEntry = logger.createLogEntry(this.javaClass.simpleName, tick)
@@ -37,7 +37,6 @@ abstract class Simulation(val options: SimulationOptions = SimulationOptions()) 
     }
 
     abstract fun run(logEntry: LogEntry = LogEntry("", 0))
-    abstract fun afterAll()
 
     fun createIndexes(indexCreator: Scenario) {
         // Create all relevant indexes
@@ -55,31 +54,25 @@ class ThreadedSimulationExecutor(
     private val metricLogger: MetricLogger = NoopLogger(),
     private val name: String) : SimulationExecutor {
 
-    override fun init(client: MongoClient) {
-        logger.info { "[$name]: Executing init" }
-        simulation.init(client)
-        logger.info { "[$name]: init executed successfully" }
-    }
-
     // Do any setup required for the full simulation
-    override fun start() {
+    override fun start(client: MongoClient) {
         logger.info { "[$name]: Executing beforeAll" }
-        simulation.beforeAll()
+        simulation.beforeAll(client)
         logger.info { "[$name]: beforeAll executed successfully" }
     }
 
     // Do any teardown required for the full simulation
-    override fun stop() {
+    override fun stop(client: MongoClient) {
         logger.info { "[$name]: Executing stop" }
-        simulation.afterAll()
+        simulation.afterAll(client)
         logger.info { "[$name]: stop executed successfully" }
     }
 
-    override fun execute(tick: Long) : Job {
+    override fun execute(tick: Long, client: MongoClient) : Job {
         return launch {
-            simulation.before()
+            simulation.before(client)
             simulation.execute(metricLogger, tick)
-            simulation.after()
+            simulation.after(client)
         }
     }
 

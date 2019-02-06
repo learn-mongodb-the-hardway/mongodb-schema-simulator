@@ -2,10 +2,9 @@ package com.mtools.schemasimulator.cli
 
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Klaxon
-import com.mtools.schemasimulator.cli.workers.MetricsAggregator
+import com.mtools.schemasimulator.logger.MetricsAggregator
 import com.mtools.schemasimulator.cli.workers.RemoteWorker
 import com.mtools.schemasimulator.messages.master.Done
-import com.mtools.schemasimulator.messages.worker.MetricsResult
 import com.mtools.schemasimulator.messages.worker.Register
 import mu.KLogging
 import spark.kotlin.Http

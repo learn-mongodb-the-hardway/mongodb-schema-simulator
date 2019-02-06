@@ -20,6 +20,24 @@ class SimpleSimulation(seedUserId: Int = 1,
                        private val numberOfDocuments: Int = 5) : Simulation(SimulationOptions(iterations = 10)) {
     override fun init(client: MongoClient) {
         this.client = client
+        db = client.getDatabase("integration_tests")
+        carts = db.getCollection("carts")
+        products = db.getCollection("products")
+        inventories = db.getCollection("inventories")
+        orders = db.getCollection("orders")
+
+        // Drop collection
+        carts.drop()
+        products.drop()
+        inventories.drop()
+        orders.drop()
+
+        // Generate some documents
+        ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
+            numberOfDocuments, 100
+        ))
+
+        createIndexes(ShoppingCart(LogEntry("", 0), carts, inventories, orders))
     }
 
     private var userId: AtomicInteger = AtomicInteger(seedUserId)
@@ -35,7 +53,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         return client
     }
 
-    override fun beforeAll() {
+    override fun beforeAll(client: MongoClient) {
         db = client.getDatabase("integration_tests")
         carts = db.getCollection("carts")
         products = db.getCollection("products")
@@ -54,7 +72,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         ))
     }
 
-    override fun before() {
+    override fun before(client: MongoClient) {
     }
 
     override fun run(logEntry: LogEntry) {
@@ -88,9 +106,9 @@ class SimpleSimulation(seedUserId: Int = 1,
         )
     }
 
-    override fun after() {
+    override fun after(client: MongoClient) {
     }
 
-    override fun afterAll() {
+    override fun afterAll(client: MongoClient) {
     }
 }

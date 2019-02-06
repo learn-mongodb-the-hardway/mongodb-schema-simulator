@@ -21,22 +21,7 @@ class SimpleSimulation(seedUserId: Int = 1,
         this.client = client
         // Drop the database
         client.getDatabase("integration_tests").drop()
-    }
-
-    private var userId: AtomicInteger = AtomicInteger(seedUserId)
-
-    lateinit var client: MongoClient
-    lateinit var db: MongoDatabase
-    lateinit var products: MongoCollection<Document>
-    lateinit var carts: MongoCollection<Document>
-    lateinit var inventories: MongoCollection<Document>
-    lateinit var orders: MongoCollection<Document>
-
-    override fun mongodbConnection(): MongoClient {
-        return client
-    }
-
-    override fun beforeAll() {
+        // Collections
         db = client.getDatabase("integration_tests")
         carts = db.getCollection("carts")
         products = db.getCollection("products")
@@ -52,7 +37,28 @@ class SimpleSimulation(seedUserId: Int = 1,
         createIndexes(ShoppingCart(LogEntry("", 0), carts, inventories, orders))
     }
 
-    override fun before() {
+    private var userId: AtomicInteger = AtomicInteger(seedUserId)
+
+    lateinit var client: MongoClient
+    lateinit var db: MongoDatabase
+    lateinit var products: MongoCollection<Document>
+    lateinit var carts: MongoCollection<Document>
+    lateinit var inventories: MongoCollection<Document>
+    lateinit var orders: MongoCollection<Document>
+
+    override fun mongodbConnection(): MongoClient {
+        return client
+    }
+
+    override fun beforeAll(client: MongoClient) {
+        db = client.getDatabase("integration_tests")
+        carts = db.getCollection("carts")
+        products = db.getCollection("products")
+        inventories = db.getCollection("inventories")
+        orders = db.getCollection("orders")
+    }
+
+    override fun before(client: MongoClient) {
     }
 
     override fun run(logEntry: LogEntry) {
@@ -86,23 +92,24 @@ class SimpleSimulation(seedUserId: Int = 1,
         )
     }
 
-    override fun after() {
+    override fun after(client: MongoClient) {
     }
 
-    override fun afterAll() {
+    override fun afterAll(client: MongoClient) {
     }
 }
 
 val tickResolution = 1L
-//val numberOfTicks = 100L
+//val numberOfTicks = 300L
 //val numberOfTicks = 3000L
-//val numberOfTicks = 30000L
-val numberOfTicks = 30000L * 2 * 3
+val numberOfTicks = 30000L
+//val numberOfTicks = 30000L * 2 * 3
 
 fun configure() : Config {
     return config {
         mongodb {
-            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+//            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+            url("mongodb://192.168.1.101:27017/?connectTimeoutMS=5000")
             db("integration_tests")
         }
 

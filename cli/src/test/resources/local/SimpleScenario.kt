@@ -19,9 +19,22 @@ class ReservationCartSimulation(seedUserId: Int = 1,
                        private val numberOfDocuments: Int = 5) : Simulation(SimulationOptions(iterations = 10)) {
     override fun init(client: MongoClient) {
         this.client = client
-    }
+        // Drop the database
+        client.getDatabase("integration_tests").drop()
 
-    private var userId: AtomicInteger = AtomicInteger(seedUserId)
+        // Get the collections
+        db = client.getDatabase("integration_tests")
+        val carts = db.getCollection("carts")
+        val inventories = db.getCollection("inventories")
+        val orders = db.getCollection("orders")
+
+        // Generate some documents
+        ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
+            numberOfDocuments, 100
+        ))
+
+        createIndexes(ShoppingCart(LogEntry("", 0), carts, inventories, orders))
+    }
 
     lateinit var client: MongoClient
     lateinit var db: MongoDatabase
@@ -29,34 +42,22 @@ class ReservationCartSimulation(seedUserId: Int = 1,
     lateinit var carts: MongoCollection<Document>
     lateinit var inventories: MongoCollection<Document>
     lateinit var orders: MongoCollection<Document>
+    private var userId: AtomicInteger = AtomicInteger(seedUserId)
 
     override fun mongodbConnection(): MongoClient {
         return client
     }
 
-    override fun beforeAll() {
+    override fun beforeAll(client: MongoClient) {
+        this.client = client
         db = client.getDatabase("integration_tests")
         carts = db.getCollection("carts")
         products = db.getCollection("products")
         inventories = db.getCollection("inventories")
         orders = db.getCollection("orders")
-
-        // Drop collection
-        carts.drop()
-        products.drop()
-        inventories.drop()
-        orders.drop()
-
-        // Generate some documents
-        ShoppingCartDataGenerator(db).generate(ShoppingCartDataGeneratorOptions(
-            numberOfDocuments, 100
-        ))
-
-        // Generate all the indexes
-        createIndexes(ShoppingCart(LogEntry(""), carts, inventories, orders))
     }
 
-    override fun before() {
+    override fun before(client: MongoClient) {
     }
 
     override fun run(logEntry: LogEntry) {
@@ -90,14 +91,21 @@ class ReservationCartSimulation(seedUserId: Int = 1,
         )
     }
 
-    override fun after() {
+    override fun after(client: MongoClient) {
     }
 
-    override fun afterAll() {
+    override fun afterAll(client: MongoClient) {
     }
 }
 
-fun simulation() : Config {
+val tickResolution = 1L
+//val numberOfTicks = 300L
+//val numberOfTicks = 3000L
+val numberOfTicks = 30000L
+//val numberOfTicks = 30000L * 2 * 3
+val numberOfDocuments = 10
+
+fun configure() : Config {
     return config {
         mongodb {
             url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
@@ -107,9 +115,9 @@ fun simulation() : Config {
         // Master level coordinator
         coordinator {
             // Each Master tick is every 1 millisecond
-            tickResolutionMilliseconds(1)
+            tickResolutionMilliseconds(tickResolution)
             // Run for 1000 ticks or in this case 1000 simulated milliseconds
-            runForNumberOfTicks(1000)
+            runForNumberOfTicks(numberOfTicks)
 
             // Local running worker thread
             local {
@@ -119,18 +127,35 @@ fun simulation() : Config {
                 constant {
                     // Each tick produces two concurrently
                     // executed instances of the simulation
-                    numberOfCExecutions(2)
+                    numberOfCExecutions(10)
                     // Execute every 100 milliseconds
-                    executeEveryMilliseconds(100)
+                    executeEveryMilliseconds(2)
                 }
 
                 // Simulation
                 simulation(
-                    ReservationCartSimulation(seedUserId = 1, numberOfDocuments = 10)
+                    ReservationCartSimulation(seedUserId = 1, numberOfDocuments = numberOfDocuments)
+                )
+            }
+
+            // Local running worker thread
+            local {
+                name("local2")
+
+                // Constant Load Pattern
+                constant {
+                    // Each tick produces two concurrently
+                    // executed instances of the simulation
+                    numberOfCExecutions(10)
+                    // Execute every 100 milliseconds
+                    executeEveryMilliseconds(4)
+                }
+
+                // Simulation
+                simulation(
+                    ReservationCartSimulation(seedUserId = 10000, numberOfDocuments = numberOfDocuments)
                 )
             }
         }
     }
 }
-
-simulation()

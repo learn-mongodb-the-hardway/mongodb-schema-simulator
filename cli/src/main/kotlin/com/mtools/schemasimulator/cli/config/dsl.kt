@@ -1,5 +1,6 @@
 package com.mtools.schemasimulator.cli.config
 
+import com.github.javafaker.Bool
 import com.mtools.schemasimulator.executor.Simulation
 import java.util.*
 import java.util.concurrent.LinkedBlockingDeque

@@ -64,9 +64,9 @@ class WorkerServer(val config: WorkerExecutorConfig) {
             // Locate the ticker we named
             val tickerConfig = result.coordinator.tickers
                 .filterIsInstance<RemoteConfig>()
-                .filter {
+                .firstOrNull {
                     it.name == configure.name
-                }.firstOrNull()
+                }
 
             // Ticker is null return an error
             if (tickerConfig != null) {
@@ -95,7 +95,9 @@ class WorkerServer(val config: WorkerExecutorConfig) {
                 }, metricLogger)
 
                 // Start the ticker
-                localTicker.start()
+                Thread {
+                    localTicker.start()
+                }.start()
 
                 // Save the ticker
                 localWorkers[configure.name] = localTicker

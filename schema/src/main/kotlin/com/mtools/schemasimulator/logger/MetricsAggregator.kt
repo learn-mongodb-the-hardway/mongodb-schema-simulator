@@ -1,8 +1,7 @@
-package com.mtools.schemasimulator.cli.workers
+package com.mtools.schemasimulator.logger
 
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
-import com.mtools.schemasimulator.logger.LogEntry
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import java.util.concurrent.ConcurrentHashMap
 

@@ -8,6 +8,8 @@ dependencies {
     compile group: 'joda-time', name: 'joda-time', version: '2.10'
 // https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.7'
+// https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+    compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
 }
 
 //implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.0'

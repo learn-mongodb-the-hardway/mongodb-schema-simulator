@@ -4,21 +4,7 @@ import com.mongodb.MongoClient
 import kotlinx.coroutines.experimental.Job
 
 interface LoadPattern {
-    fun init(client: MongoClient)
-    fun start()
-    fun tick(time: Long) : List<Job>
-    fun stop()
+    fun start(client: MongoClient)
+    fun tick(time: Long, client: MongoClient) : List<Job>
+    fun stop(client: MongoClient)
 }
-
-/*
-  MasterTicker
-    -> WorkerTicker (Local/Distributed)
-        -> tick
-            -> load pattern
-                -> simulator
-            -> load pattern
-                -> simulator
-    -> WorkerTicker
-
-
- */
