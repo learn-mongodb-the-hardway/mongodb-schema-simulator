@@ -9,24 +9,29 @@ import org.knowm.xchart.style.markers.SeriesMarkers
 import java.io.File
 
 class GraphGenerator(private val name:String, private val outputPath: File, private val dpi: Int, private val filters: List<String> = listOf()) {
-    fun generate(entries: MutableMap<Long, MutableMap<String, SummaryStatistics>>) {
+    fun generate(entries: Map<Long, Map<String, SummaryStatistics>>) {
         // Go over all the keys
         val keys = entries.keys.sorted()
         // Double Arrays
         val xDoubles = mutableListOf<Long>()
         val yDoubles = mutableListOf<Double>()
+        var max: Double = Double.MIN_VALUE
+        var min: Double = Double.MAX_VALUE
 
         // Calculate the total series
         keys.forEach {key ->
+            val entry = entries.getValue(key).getValue("total")
+            if (entry.max > max) max = entry.max
+            if (entry.min < min && entry.min != 0.0) min = entry.min
             xDoubles.add(key)
-            yDoubles.add(entries[key]!!["total"]!!.mean)
+            yDoubles.add(entry.mean)
         }
 
         // Create Chart
         val chart = XYChartBuilder()
             .width(1024)
             .height(768)
-            .title("Execution Graph for: $name")
+            .title("Execution Graph for: $name [min: $min ms, max: $max ms]")
             .xAxisTitle("Time (ms)")
             .yAxisTitle("Milliseconds").build()
 
@@ -36,7 +41,7 @@ class GraphGenerator(private val name:String, private val outputPath: File, priv
         chart.styler.yAxisLabelAlignment = Styler.TextAlignment.Right
         chart.styler.yAxisDecimalPattern = "#,###.## ms"
         chart.styler.xAxisDecimalPattern = "#,###.## ms"
-        chart.styler.isYAxisLogarithmic = true;
+//        chart.styler.isYAxisLogarithmic = true
         chart.styler.plotMargin = 0
         chart.styler.plotContentSize = .95
 

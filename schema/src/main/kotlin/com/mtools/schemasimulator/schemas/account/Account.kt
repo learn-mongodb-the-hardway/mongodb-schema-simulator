@@ -7,6 +7,7 @@ import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
 import com.mtools.schemasimulator.schemas.SchemaSimulatorException
+import mu.KLogging
 import org.bson.Document
 import org.bson.types.Decimal128
 import org.bson.types.ObjectId
@@ -49,7 +50,7 @@ class Account(logEntry: LogEntry,
             )),
             UpdateOptions().upsert(true))
         if (result.upsertedId == null) {
-            throw SchemaSimulatorException("failed to create account entry")
+            logger.warn { "Account for user $name already exists" }
         }
     }
 
@@ -58,6 +59,11 @@ class Account(logEntry: LogEntry,
      */
     fun transfer(toAccount: Account, amount: BigDecimal, failurePoint: TransactionFailPoints = TransactionFailPoints.NONE) : Transaction {
         var result:Transaction? = null
+
+        // Throw an error if it's the same account
+        if (name == toAccount.name) {
+            throw SchemaSimulatorException("Attempting to credit and debit the same account from[$name] to[${toAccount.name}]")
+        }
 
         log("transfer") {
             val transaction = Transaction(logEntry, accounts, transactions, ObjectId(), this, toAccount, amount)
@@ -147,6 +153,8 @@ class Account(logEntry: LogEntry,
             balance = value.bigDecimalValue()
         }
     }
+
+    companion object : KLogging()
 }
 
 class Transaction(
@@ -354,4 +362,6 @@ class Transaction(
             else -> throw SchemaSimulatorException("unexpected transaction state transition [$state]")
         }
     }
+
+    companion object : KLogging()
 }

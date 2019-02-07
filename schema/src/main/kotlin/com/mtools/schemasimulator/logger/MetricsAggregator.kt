@@ -6,12 +6,14 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import java.util.concurrent.ConcurrentHashMap
 
 class MetricsAggregator {
-    val metrics: MutableMap<Long, MutableMap<String, SummaryStatistics>> = ConcurrentHashMap()
+    val metrics: MutableMap<Long, ConcurrentHashMap<String, SummaryStatistics>> = ConcurrentHashMap()
 
+    @Synchronized
     fun processTicks(logEntries: List<LogEntry>) {
-        logEntries.forEach { logEntry ->
+        val entries = logEntries.toTypedArray().copyOf()
+        for (logEntry in entries) {
             if (!metrics.containsKey(logEntry.tick)) {
-                metrics[logEntry.tick] = mutableMapOf()
+                metrics[logEntry.tick] = ConcurrentHashMap()
             }
 
             // Create new statistics entry
@@ -22,17 +24,19 @@ class MetricsAggregator {
             // Add the total
             metrics[logEntry.tick]!!["total"]!!.addValue(logEntry.total.toDouble() / 1000000)
 
+            val logEntries = logEntry.entries.toTypedArray().copyOf()
             // For each entry add new stat
-            logEntry.entries.forEach {
-                if (!metrics[logEntry.tick]!!.containsKey(it.first)) {
-                    metrics[logEntry.tick]!![it.first] = SummaryStatistics()
+            for (entry in logEntries) {
+                if (!metrics[logEntry.tick]!!.containsKey(entry.first)) {
+                    metrics[logEntry.tick]!![entry.first] = SummaryStatistics()
                 }
 
-                metrics[logEntry.tick]!![it.first]!!.addValue(it.second.toDouble() / 1000000)
+                metrics[logEntry.tick]!![entry.first]!!.addValue(entry.second.toDouble() / 1000000)
             }
         }
     }
 
+    @Synchronized
     fun processTicks(ticks: JsonArray<JsonObject>) {
         ticks.forEach { tick ->
             val simulation = tick.string("name")!!

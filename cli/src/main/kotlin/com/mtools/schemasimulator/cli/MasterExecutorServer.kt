@@ -11,6 +11,7 @@ import spark.kotlin.Http
 import spark.kotlin.RouteHandler
 import spark.kotlin.ignite
 import java.io.StringReader
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingDeque
 
 class MasterExecutorServer(
@@ -56,6 +57,7 @@ class MasterExecutorServer(
 
         // Get the json object
         val metrics = Klaxon().parseJsonObject(StringReader(body))
+
         // Get the ticks
         val ticks = metrics.array<JsonObject>("ticks")!!
 

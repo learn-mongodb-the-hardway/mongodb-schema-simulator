@@ -4,6 +4,7 @@ import com.beust.klaxon.Klaxon
 import com.mtools.schemasimulator.messages.worker.MetricsResult
 import mu.KLogging
 import java.net.URI
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 
 interface MetricLogger {
@@ -28,7 +29,7 @@ class LocalMetricLogger(
     private val aggregator: MetricsAggregator,
     private val cutOff: Int = 500
 ) : MetricLogger {
-    var logEntries = CopyOnWriteArrayList<LogEntry>()
+    private var logEntries = ConcurrentLinkedQueue<LogEntry>()
 
     override fun createLogEntry(simulation: String, tick: Long): LogEntry {
         synchronized(this) {
@@ -37,11 +38,11 @@ class LocalMetricLogger(
 
             if (logEntries.size == cutOff) {
                 // Get a reference
-                val list = logEntries.toList()
+                val list = logEntries.toTypedArray().copyOf()
                 // Empty the list
-                logEntries = CopyOnWriteArrayList()
+                logEntries = ConcurrentLinkedQueue()
                 // Send a metrics message
-                aggregator.processTicks(list)
+                aggregator.processTicks(list.toList())
                 // Log metrics sent
                 logger.info("metrics received [$name]:[Max Tick:${list.map {
                     it.tick
@@ -56,7 +57,10 @@ class LocalMetricLogger(
         // Get a reference
         val list = logEntries.toList()
         // Empty the list
-        logEntries = CopyOnWriteArrayList()
+        // Empty the list
+        synchronized(logEntries) {
+            logEntries = ConcurrentLinkedQueue()
+        }
         // Process remaining ticks
         aggregator.processTicks(list)
     }
@@ -83,7 +87,7 @@ class RemoteMetricLogger(val name: String, val masterURI: URI, val uri: URI, val
 
             if (logEntries.size == cutOff) {
                 // Get a reference
-                val list = logEntries
+                val list = logEntries.toTypedArray().copyOf().toList()
                 // Empty the list
                 logEntries = CopyOnWriteArrayList()
                 // Send a metrics message

@@ -57,6 +57,28 @@ class ExecutorTest {
 
     @Test
     @Disabled
+    fun executeMongoTransaction() {
+        // Setup master
+        val executor = MasterExecutor(MasterExecutorConfig(
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/MongoTransactionScenario.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenario.png"),
+            graphOutputDPI = 300,
+            configurationMethod = "configureMongoTransactions",
+            graphFilters = listOf("total")
+        ))
+
+        val masterThread = Thread(Runnable {
+            executor.start()
+        })
+
+        masterThread.start()
+        masterThread.join()
+    }
+
+    @Test
+    @Disabled
     fun correctlyExecuteMasterWorkerConfig() {
         // Setup master
         val masterExecutor = MasterExecutor(MasterExecutorConfig(

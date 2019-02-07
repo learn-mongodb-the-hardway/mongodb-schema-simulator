@@ -1,6 +1,8 @@
 package com.mtools.schemasimulator.schemas.accounttransaction
 
 import com.mongodb.MongoClient
+import com.mongodb.MongoCommandException
+import com.mongodb.MongoException
 import com.mongodb.client.ClientSession
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Indexes
@@ -51,24 +53,36 @@ class Account(logEntry: LogEntry,
      * Transfer an amount to this account from the provided account
      */
     fun transfer(toAccount: Account, amount: BigDecimal) = log("transfer") {
-        val session = client.startSession()
+        // Throw an error if it's the same account
+        if (name == toAccount.name) {
+            throw SchemaSimulatorException("Attempting to credit and debit the same account from[$name] to[${toAccount.name}]")
+        }
 
-        try {
-            // Start the transaction
-            session.startTransaction()
-            // Debit current transaction
-            debit(session, amount)
-            // Credit the target account
-            toAccount.credit(session, amount)
-            // Create a transaction entry
-            Transaction(logEntry, transactions, this, toAccount, amount).create(session)
-            // Execute the transaction
-            session.commitTransaction()
-        } catch (exception:Exception) {
-            // Abort the transaction
-            session.abortTransaction()
-            // Rethrow the exception
-            throw exception
+        // Attempt to commit the transaction
+        while (true) {
+            val session = client.startSession()
+
+            try {
+                // Start the transaction
+                session.startTransaction()
+                // Debit current transaction
+                debit(session, amount)
+                // Credit the target account
+                toAccount.credit(session, amount)
+                // Create a transaction entry
+                Transaction(logEntry, transactions, this, toAccount, amount).create(session)
+                // Execute the transaction
+                session.commitTransaction()
+                break
+            } catch (exception:MongoException) {
+                if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)
+                    || exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+                    session.close()
+                    continue
+                } else {
+                    throw exception
+                }
+            }
         }
     }
 

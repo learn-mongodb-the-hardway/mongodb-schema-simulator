@@ -8,9 +8,9 @@ import mu.KLogging
 
 class LocalWorkerFacade(
     private val name: String,
-    private val mongoClient: MongoClient,
-    private val pattern: LoadPattern,
-    private val metricLogger: MetricLogger
+    mongoClient: MongoClient,
+    pattern: LoadPattern,
+    metricLogger: MetricLogger
 ): Worker {
     private val localTicker = LocalWorker(name, mongoClient, pattern, metricLogger)
     private var thread: Thread? = null
