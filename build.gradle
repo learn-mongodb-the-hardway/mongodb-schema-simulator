@@ -7,7 +7,7 @@ buildscript {
         kotlinLoggingVersion = '1.4.8'
         klaxonVersion = '3.0.1'
 
-        mongodbDriverVersion = '3.6.3'
+        mongodbDriverVersion = '3.10.0'
 
         junitVersion = '5.1.0'
         hamkrestVersion = '1.4.2.2'

@@ -68,11 +68,11 @@ class ShoppingCart(
 
         // Pull the product reservation from all inventories
         result = inventories.updateMany(Document(mapOf(
-            "reservations._id" to userId
+            "reservations._id" to cart["_id"]
         )), Document(mapOf(
             "\$pull" to mapOf(
                 "reservations" to mapOf(
-                    "_id" to userId
+                    "_id" to cart["_id"]
                 )
             )
         )))
@@ -107,7 +107,7 @@ class ShoppingCart(
             products.forEach { product ->
 
                 // Return the quantity to the inventory from the cart
-                inventories.updateOne(Document(mapOf(
+                var result = inventories.updateOne(Document(mapOf(
                     "_id" to product["_id"],
                     "reservations._id" to cart["_id"],
                     "reservations.quantity" to product["quantity"]
@@ -122,14 +122,22 @@ class ShoppingCart(
                     )
                 )))
 
+                if (result.modifiedCount == 0L) {
+                    throw Exception("Failed to return product ${product["_id"]} from cart ${cart["_id"]} with quantity ${product["quantity"]} to inventory")
+                }
+
                 // Set the cart to expires
-                carts.updateOne(Document(mapOf(
+                result = carts.updateOne(Document(mapOf(
                     "_id" to cart["_id"]
                 )), Document(mapOf(
                     "\$set" to mapOf(
                         "state" to "expired"
                     )
                 )))
+
+                if (result.modifiedCount == 0L) {
+                    throw Exception("Failed to set cart ${cart["_id"]} to expired")
+                }
             }
         }
     }
@@ -183,7 +191,7 @@ class ShoppingCart(
         // Update the cart with new size
         result = inventories.updateOne(Document(mapOf(
             "_id" to product["_id"],
-            "reservations._id" to userId,
+            "reservations._id" to cart["_id"],
             "quantity" to mapOf(
                 "\$gte" to delta
             )
@@ -233,6 +241,13 @@ class ShoppingCart(
             )
         )), UpdateOptions().upsert(true))
 
+        // Get the cart
+        val cart = carts.find(Document(mapOf(
+            "userId" to userId,
+            "products._id" to product["_id"],
+            "state" to "active"
+        ))).first()
+
         // If we correctly inserted
         if (result.upsertedId != null || result.modifiedCount == 1L) {
             // Execute the inventory update
@@ -244,7 +259,7 @@ class ShoppingCart(
                 "\$inc" to mapOf("quantity" to quantity.unaryMinus()),
                 "\$push" to mapOf(
                     "reservations" to mapOf(
-                        "_id" to userId,
+                        "_id" to cart["_id"],
                         "quantity" to quantity,
                         "createdOn" to Date()
                     )

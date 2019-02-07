@@ -37,14 +37,14 @@ class ReservationShoppingCartTest {
 
         // Get the generated documents
         val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
         assertNotNull(inventoryR)
 
-        cartR.shouldContainValues(mapOf<String, f>(
-            "_id" to f(userId, Integer(0), false),
+        cartR.shouldContainValues(mapOf(
+            "userId" to f(userId, Integer(0), false),
             "state" to f("active", String(), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products.0._id" to f(f.Skip(), ObjectId(), false),
@@ -53,11 +53,11 @@ class ReservationShoppingCartTest {
             "products.0.price" to f(f.Skip(), Double.MIN_VALUE, false)
         ))
 
-        inventoryR.shouldContainValues(mapOf<String, f>(
+        inventoryR.shouldContainValues(mapOf(
             "_id" to f(f.Skip(), ObjectId(), false),
             "quantity" to f(inventory.getInteger("quantity") - 1, Integer(0), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to f(userId, Integer(0), false),
+            "reservations.0._id" to f(cartR["_id"], ObjectId(), false),
             "reservations.0.quantity" to f(1, Integer(0), false),
             "reservations.0.createdOn" to f(f.Skip(), Date(), false)
         ))
@@ -83,14 +83,14 @@ class ReservationShoppingCartTest {
 
         // Get the generated documents
         val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
         assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf<String, f>(
-            "_id" to f(userId, Integer(0), false),
+            "userId" to f(userId, Integer(0), false),
             "state" to f("active", String(), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products.0._id" to f(f.Skip(), ObjectId(), false),
@@ -103,7 +103,7 @@ class ReservationShoppingCartTest {
             "_id" to f(f.Skip(), ObjectId(), false),
             "quantity" to f(inventory.getInteger("quantity") - 2, Integer(0), false),
             "modifiedOn" to f(f.Skip(), Date(), false),
-            "reservations.0._id" to f(userId, Integer(0), false),
+            "reservations.0._id" to f(cartR["_id"], ObjectId(), false),
             "reservations.0.quantity" to f(2, Integer(0), false),
             "reservations.0.createdOn" to f(f.Skip(), Date(), false)
         ))
@@ -128,7 +128,7 @@ class ReservationShoppingCartTest {
 
         // Get the generated documents
         val preCartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val preInventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(preCartR)
@@ -139,14 +139,14 @@ class ReservationShoppingCartTest {
 
         // Get the generated documents
         val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
         assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "state" to "active",
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products.0._id" to preCartR.g("products.0._id"),
@@ -187,14 +187,14 @@ class ReservationShoppingCartTest {
         cart.expireAllCarts(date)
 
         val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(cartR)
         assertNotNull(inventoryR)
 
         cartR.shouldContainValues(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "state" to "expired",
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products" to f(f.Skip(), mutableListOf<Document>(), false, 1),
@@ -231,7 +231,7 @@ class ReservationShoppingCartTest {
 
         // Get the generated documents
         val preCartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val preInventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         assertNotNull(preCartR)
@@ -249,7 +249,7 @@ class ReservationShoppingCartTest {
         )
 
         val cartR = carts
-            .find(Document(mapOf("_id" to userId))).first()
+            .find(Document(mapOf("userId" to userId))).first()
         val inventoryR = inventories
             .find(Document(mapOf("_id" to product["_id"]))).first()
         val orderR = orders
@@ -259,7 +259,7 @@ class ReservationShoppingCartTest {
         assertNotNull(orderR)
 
         cartR.shouldContainValues(mapOf(
-            "_id" to userId,
+            "userId" to userId,
             "state" to "complete",
             "modifiedOn" to f(f.Skip(), Date(), false),
             "products.0._id" to preCartR.g("products.0._id"),
