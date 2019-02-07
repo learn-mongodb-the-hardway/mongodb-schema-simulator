@@ -10,6 +10,8 @@ dependencies {
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.7'
 // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+// https://mvnrepository.com/artifact/com.twitter.common/stats
+    compile group: 'com.twitter.common', name: 'stats', version: '0.0.116'
 }
 
 //implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.0'
