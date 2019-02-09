@@ -58,10 +58,10 @@ class Account(logEntry: LogEntry,
             throw SchemaSimulatorException("Attempting to credit and debit the same account from[$name] to[${toAccount.name}]")
         }
 
+        val session = client.startSession()
+
         // Attempt to commit the transaction
         while (true) {
-            val session = client.startSession()
-
             try {
                 // Start the transaction
                 session.startTransaction()
@@ -77,13 +77,15 @@ class Account(logEntry: LogEntry,
             } catch (exception:MongoException) {
                 if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)
                     || exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
-                    session.close()
                     continue
                 } else {
+                    session.close()
                     throw exception
                 }
             }
         }
+
+        session.close()
     }
 
     private fun credit(session: ClientSession, amount: BigDecimal) = log("credit") {
