@@ -33,7 +33,7 @@ class ShoppingCart(
 
         // Create an order Id
         val orderId = ObjectId()
-        // Insert an order document
+        // Insert an order createWriteModel
         orders.insertOne(Document(mapOf(
             "_id" to orderId,
             "userId" to userId,
@@ -55,7 +55,7 @@ class ShoppingCart(
             )
         )))
 
-        // If no document was modified we failed to update the cart
+        // If no createWriteModel was modified we failed to update the cart
         // and need to rollback
         if (result.modifiedCount == 0L) {
             // Rollback the order

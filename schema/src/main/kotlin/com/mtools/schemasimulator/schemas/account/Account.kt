@@ -2,7 +2,9 @@ package com.mtools.schemasimulator.schemas.account
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Indexes
+import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.WriteModel
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.Index
 import com.mtools.schemasimulator.schemas.Scenario
@@ -34,7 +36,7 @@ class Account(logEntry: LogEntry,
     }
 
     /*
-     * Create a new account document
+     * Create a new account createWriteModel
      */
     fun create() = log("create") {
         val result = accounts.updateOne(
@@ -154,17 +156,30 @@ class Account(logEntry: LogEntry,
         }
     }
 
+    fun createWriteModel() : WriteModel<Document> {
+        return UpdateOneModel<Document>(
+            Document(mapOf("name" to name)),
+            Document(mapOf(
+                "\$setOnInsert" to mapOf(
+                    "name" to name,
+                    "balance" to balance,
+                    "pendingTransactions" to listOf<Document>()
+                )
+            )),
+            UpdateOptions().upsert(true))
+    }
+
     companion object : KLogging()
 }
 
 class Transaction(
     logEntry: LogEntry,
-    val accounts: MongoCollection<Document>,
-    val transactions: MongoCollection<Document>,
+    private val accounts: MongoCollection<Document>,
+    private val transactions: MongoCollection<Document>,
     val id: ObjectId,
-    val fromAccount: Account,
-    val toAccount: Account,
-    val amount: BigDecimal) : Scenario(logEntry) {
+    private val fromAccount: Account,
+    private val toAccount: Account,
+    private val amount: BigDecimal) : Scenario(logEntry) {
     override fun indexes(): List<Index> {
         return listOf(
             Index(transactions.namespace.databaseName, transactions.namespace.collectionName,

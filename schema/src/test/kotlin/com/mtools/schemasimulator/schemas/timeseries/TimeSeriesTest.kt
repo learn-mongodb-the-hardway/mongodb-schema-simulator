@@ -34,7 +34,7 @@ class TimeSeriesTest {
             timeSeries.inc(date, 1.0)
         }
 
-        // Grab the document
+        // Grab the createWriteModel
         val doc = timeseries.find(Document(mapOf(
             "_id" to timeSeries.id
         ))).firstOrNull()
@@ -60,7 +60,7 @@ class TimeSeriesTest {
             DateTime(2018, 10, 1, 1, 0, 1).toDate(),
             1.0)
 
-        // Grab the document
+        // Grab the createWriteModel
         val doc = timeseries.find(Document(mapOf(
             "_id" to timeSeries.id
         ))).firstOrNull()
@@ -85,7 +85,7 @@ class TimeSeriesTest {
             DateTime(2018, 10, 1, 0, 0, 1).toDate(),
             1.0)
 
-        // Grab the document
+        // Grab the createWriteModel
         val doc = timeseries.find(Document(mapOf(
             "_id" to timeSeries.id
         ))).firstOrNull()
@@ -110,7 +110,7 @@ class TimeSeriesTest {
             DateTime(2018, 10, 1, 0, 0, 1).toDate(),
             1.0)
 
-        // Grab the document
+        // Grab the createWriteModel
         val doc = timeseries.find(Document(mapOf(
             "_id" to timeSeries.id
         ))).firstOrNull()

@@ -37,7 +37,7 @@ class TimeSeries(
     )
 
     /*
-     * Create a new timeseries bucket document on mongodb
+     * Create a new timeseries bucket createWriteModel on mongodb
      */
     fun create() : TimeSeries {
         timeseries.insertOne(Document(mapOf(
@@ -70,7 +70,7 @@ class TimeSeries(
         // Create JodaTime object
         val dateTime = DateTime(time)
 
-        // Inc document
+        // Inc createWriteModel
         val incDocument = updateStatement["\$inc"] as Document
 
         // Handle the resolution
@@ -86,7 +86,7 @@ class TimeSeries(
             }
         }
 
-        // Set the inc document
+        // Set the inc createWriteModel
         updateStatement["\$inc"] = incDocument
 
         // Execute the update
@@ -97,13 +97,13 @@ class TimeSeries(
         )), updateStatement, UpdateOptions().upsert(true))
 
         if (result.upsertedId == null && result.modifiedCount == 0L) {
-            throw SchemaSimulatorException("could not correctly update or upsert the timeseries document with id $id")
+            throw SchemaSimulatorException("could not correctly update or upsert the timeseries createWriteModel with id $id")
         }
     }
 
     companion object {
         /*
-         * Pre allocate an hour worth of measurements in a document
+         * Pre allocate an hour worth of measurements in a createWriteModel
          */
         fun preAllocateMinute(logEntry: LogEntry,
                               timeseries: MongoCollection<Document>,
@@ -118,7 +118,7 @@ class TimeSeries(
         }
 
         /*
-         * Pre allocate an hour worth of measurements in a document
+         * Pre allocate an hour worth of measurements in a createWriteModel
          */
         fun preAllocateHour(logEntry: LogEntry,
                             timeseries: MongoCollection<Document>,
@@ -138,7 +138,7 @@ class TimeSeries(
         }
 
         /*
-         * Pre allocate an hour worth of measurements in a document
+         * Pre allocate an hour worth of measurements in a createWriteModel
          */
         fun preAllocateDay(logEntry: LogEntry,
                            timeseries: MongoCollection<Document>,

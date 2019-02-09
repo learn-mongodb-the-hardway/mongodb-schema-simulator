@@ -39,7 +39,7 @@ class Product(
     )
 
     /*
-     * Create a new mongodb product document
+     * Create a new mongodb product createWriteModel
      */
     fun create() = log("create") {
         products.insertOne(Document(mapOf(

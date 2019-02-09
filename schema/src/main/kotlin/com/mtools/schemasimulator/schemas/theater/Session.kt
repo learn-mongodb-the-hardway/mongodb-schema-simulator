@@ -34,7 +34,7 @@ class Session (
     var seatsAvailable: Int = 0
 
     /*
-     *  Create a new session instance and save the document in mongodb
+     *  Create a new session instance and save the createWriteModel in mongodb
      */
     fun create(): Session {
         val doc = theaters.find(Document(mapOf(

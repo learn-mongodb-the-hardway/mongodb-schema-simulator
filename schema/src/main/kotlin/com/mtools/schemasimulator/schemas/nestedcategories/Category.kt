@@ -53,7 +53,7 @@ class Category(
     )
 
     /*
-     * Create a new mongodb category document
+     * Create a new mongodb category createWriteModel
      */
     fun create() = log("create") {
         categories.insertOne(Document(mapOf(
@@ -139,7 +139,7 @@ class Category(
                 )))
             }
 
-            // Get the document
+            // Get the createWriteModel
             val doc = cursor.firstOrNull()
             doc ?: throw SchemaSimulatorException("could not locate category with path $path")
 

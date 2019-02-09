@@ -29,7 +29,7 @@ class Account(logEntry: LogEntry,
     }
 
     /*
-     * Create a new account document
+     * Create a new account createWriteModel
      */
     fun create() = log("create") {
         val result = accounts.updateOne(
@@ -60,10 +60,23 @@ class Account(logEntry: LogEntry,
 
         val session = client.startSession()
 
-        // Attempt to commit the transaction
+        fun retry(session: ClientSession) : MongoException? {
+            while (true) {
+                return try {
+                    session.commitTransaction()
+                    null
+                } catch (exception:MongoException) {
+                    if (exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+                        continue
+                    }
+
+                    exception
+                }
+            }
+        }
+
         while (true) {
             try {
-                // Start the transaction
                 session.startTransaction()
                 // Debit current transaction
                 debit(session, amount)
@@ -75,17 +88,57 @@ class Account(logEntry: LogEntry,
                 session.commitTransaction()
                 break
             } catch (exception:MongoException) {
-                if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)
-                    || exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
-                    continue
-                } else {
+                if (exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+                    val mongoException = retry(session) ?: break
+
+                    // Retry the transaction by aborting the current one and starting a new one
+                    if (mongoException.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                        session.abortTransaction()
+                        continue
+                    }
+
+                    // Otherwise we have a non-recoverable error and need to rethrow the error
                     session.close()
-                    throw exception
+                    throw mongoException
+                }
+
+                // Retry the transaction by aborting the current one and starting a new one
+                if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)) {
+                    session.abortTransaction()
+                    continue
                 }
             }
         }
 
         session.close()
+
+
+//        // Attempt to commit the transaction
+//        while (true) {
+//            val session = client.startSession()
+//
+//            try {
+//                // Start the transaction
+//                session.startTransaction()
+//                // Debit current transaction
+//                debit(session, amount)
+//                // Credit the target account
+//                toAccount.credit(session, amount)
+//                // Create a transaction entry
+//                Transaction(logEntry, transactions, this, toAccount, amount).create(session)
+//                // Execute the transaction
+//                session.commitTransaction()
+//                break
+//            } catch (exception:MongoException) {
+//                if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)
+//                    || exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
+//                    session.close()
+//                    continue
+//                } else {
+//                    throw exception
+//                }
+//            }
+//        }
     }
 
     private fun credit(session: ClientSession, amount: BigDecimal) = log("credit") {
@@ -99,7 +152,7 @@ class Account(logEntry: LogEntry,
 
         if (result.isModifiedCountAvailable
             && result.modifiedCount == 0L) {
-            throw SchemaSimulatorException("failed to credit account $name the amount $amount")
+            session.abortTransaction()
         }
     }
 
@@ -117,7 +170,7 @@ class Account(logEntry: LogEntry,
 
         if (result.isModifiedCountAvailable
             && result.modifiedCount == 0L) {
-            throw SchemaSimulatorException("failed to debit account ${this.name} the amount $amount")
+            session.abortTransaction()
         }
     }
 

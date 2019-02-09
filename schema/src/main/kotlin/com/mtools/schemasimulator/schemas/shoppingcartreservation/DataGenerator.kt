@@ -3,6 +3,7 @@ package com.mtools.schemasimulator.schemas.shoppingcartreservation
 import com.github.javafaker.Faker
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mongodb.client.model.WriteModel
 import com.mtools.schemasimulator.logger.LogEntry
 import com.mtools.schemasimulator.schemas.DataGenerator
 import com.mtools.schemasimulator.schemas.DataGeneratorOptions
@@ -90,10 +91,25 @@ class AccountDataGenerator(private val db: MongoDatabase) : DataGenerator {
         // Collections
         val accounts = db.getCollection("accounts")
         val transactions = db.getCollection("transactions")
+        val names: MutableSet<String> = mutableSetOf()
+        val writeModels = mutableListOf<WriteModel<Document>>()
+
+        fun getUniqueName() : String {
+            while(true) {
+                val name = Faker().name().fullName()
+                if (!names.contains(name)) {
+                    names += name
+                    return name
+                }
+            }
+        }
 
         for (i in 0..options.numberOfAccounts) {
-            Account(createLogEntry(), accounts, transactions, Faker().name().fullName(), options.startingBalance).create()
+            writeModels += Account(createLogEntry(), accounts, transactions, getUniqueName(), options.startingBalance).createWriteModel()
         }
+
+        // Bulk execute the write models
+        accounts.bulkWrite(writeModels)
     }
 }
 

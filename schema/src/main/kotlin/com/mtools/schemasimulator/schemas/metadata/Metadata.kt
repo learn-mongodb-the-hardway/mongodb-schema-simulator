@@ -33,7 +33,7 @@ class Metadata(
     }
 
     /*
-     * Create a new metadata document on mongodb
+     * Create a new metadata createWriteModel on mongodb
      */
     fun create() = log("create") {
         metadatas.insertOne(Document(mapOf(

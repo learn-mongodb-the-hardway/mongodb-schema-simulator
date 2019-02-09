@@ -121,7 +121,7 @@ class ShoppingCart(
                 )))
             }
         } else {
-            // Insert an order document
+            // Insert an order createWriteModel
             orders.insertOne(Document(mapOf(
                 "userId" to userId,
                 "createdOn" to Date(),

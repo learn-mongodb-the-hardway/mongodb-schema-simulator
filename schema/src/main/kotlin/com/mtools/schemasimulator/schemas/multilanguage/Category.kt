@@ -75,7 +75,7 @@ class Category(
     }
 
     /*
-     * Create a new mongodb category document
+     * Create a new mongodb category createWriteModel
      */
     fun create() = log("create") {
         categories.insertOne(Document(mapOf(
