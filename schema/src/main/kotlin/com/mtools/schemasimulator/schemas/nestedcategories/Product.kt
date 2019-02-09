@@ -64,6 +64,7 @@ class Product(
         name = category.getString("name")
         cost = category["cost"] as BigDecimal
         currency = category.getString("currency")
+        @Suppress("UNCHECKED_CAST")
         categories = category["categories"] as List<String>
     }
 
@@ -87,6 +88,7 @@ class Product(
                         it.getString("name"),
                         (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
+                        @Suppress("UNCHECKED_CAST")
                         it["categories"] as List<String>
                     )
                 }
@@ -125,6 +127,7 @@ class Product(
                         it.getString("name"),
                         (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
+                        @Suppress("UNCHECKED_CAST")
                         it["categories"] as List<String>
                     )
                 }
@@ -163,6 +166,7 @@ class Product(
                         it.getString("name"),
                         (it["cost"]!! as Decimal128).bigDecimalValue(),
                         it.getString("currency"),
+                        @Suppress("UNCHECKED_CAST")
                         it["categories"] as List<String>
                     )
                 }

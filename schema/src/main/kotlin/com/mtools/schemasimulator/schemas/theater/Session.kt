@@ -45,6 +45,7 @@ class Session (
 
         // Set current values
         seatsAvailable = doc.getInteger("seatsAvailable")
+        @Suppress("UNCHECKED_CAST")
         seats = doc["seats"] as List<List<Int>>
 
         // Create a session for this theater
@@ -121,6 +122,7 @@ class Session (
         // Reverses a specific reservation
         fun reverseReservation(doc: Document, cartId: Any) {
             // Locate the right cart id
+            @Suppress("UNCHECKED_CAST")
             val reservations = doc["reservations"] as List<Document>
             val reservation = reservations.firstOrNull {
                 it["_id"] == cartId
@@ -129,6 +131,7 @@ class Session (
             // No reservation found return
             reservation ?: return
             // Reverse the specific reservation
+            @Suppress("UNCHECKED_CAST")
             Session(logEntry, sessions, theaters, doc["_id"]!!).release(reservation["_id"]!!, reservation["seats"] as List<List<Int>>)
         }
 
@@ -194,6 +197,7 @@ class Session (
         doc ?: throw Exception("session with id $id not found")
 
         seatsAvailable = doc.getInteger("seatsAvailable")
+        @Suppress("UNCHECKED_CAST")
         seats = doc["seats"] as List<List<Int>>
     }
 }

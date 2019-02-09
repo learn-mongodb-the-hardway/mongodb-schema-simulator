@@ -103,6 +103,7 @@ class ShoppingCart(
             ),
             "state" to "active"
         ))).forEach { cart ->
+            @Suppress("UNCHECKED_CAST")
             val products = cart["products"] as List<Document>
             products.forEach { product ->
 
@@ -158,6 +159,7 @@ class ShoppingCart(
             ?: throw SchemaSimulatorException("cart for user $userId not found")
 
         // Locate the product and get the old quantity
+        @Suppress("UNCHECKED_CAST")
         val products = cart["products"] as List<Document>
         products.forEach {
             if (it["_id"] == product["_id"]) {
@@ -249,7 +251,7 @@ class ShoppingCart(
         ))).first()
 
         // If we correctly inserted
-        if (result.upsertedId != null || result.modifiedCount == 1L) {
+        if ((result.upsertedId != null || result.modifiedCount == 1L) && cart != null) {
             // Execute the inventory update
             result = inventories.updateOne(Document(mapOf(
                 "_id" to product["_id"],
@@ -259,7 +261,7 @@ class ShoppingCart(
                 "\$inc" to mapOf("quantity" to quantity.unaryMinus()),
                 "\$push" to mapOf(
                     "reservations" to mapOf(
-                        "_id" to cart["_id"],
+                        "_id" to cart.getValue("_id"),
                         "quantity" to quantity,
                         "createdOn" to Date()
                     )

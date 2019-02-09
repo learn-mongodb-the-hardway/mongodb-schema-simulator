@@ -106,6 +106,7 @@ class Cart (
         }
 
         // Create Receipt
+        @Suppress("UNCHECKED_CAST")
         Receipt(logEntry, receipts, doc["reservations"] as List<Document>).create()
         // Apply all reservations in the cart
         Session(logEntry, sessions, theaters, id).settle(id)
@@ -128,6 +129,7 @@ class Cart (
      * Release a reservation
      */
     fun release(reservation: Document) {
+        @Suppress("UNCHECKED_CAST")
         Session(logEntry, sessions, theaters, reservation["sessionId"]!!)
             .release(id, reservation["seats"] as List<List<Int>>)
     }
@@ -144,6 +146,7 @@ class Cart (
         doc ?: throw SchemaSimulatorException("could not locate cart with id $id")
 
         // Reservations left
+        @Suppress("UNCHECKED_CAST")
         val reservations = doc["reservations"] as List<Document>
 
         // For all the reservations, reverse them

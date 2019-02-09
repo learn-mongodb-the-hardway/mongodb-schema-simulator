@@ -158,7 +158,10 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             config.graphOutputFilePath,
             config.graphOutputDPI,
             config.graphFilters
-        ).generate(metricsAggregator.metrics)
+        ).generate(
+            metricsAggregator.metrics,
+            metricsAggregator.metricsByType
+        )
 
         logger.info { "Finished executing simulation, terminating" }
     }

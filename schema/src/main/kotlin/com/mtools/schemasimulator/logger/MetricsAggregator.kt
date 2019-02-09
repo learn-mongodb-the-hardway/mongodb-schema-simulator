@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class MetricsAggregator {
     val metrics: MutableMap<Long, ConcurrentHashMap<String, Statistics>> = ConcurrentHashMap()
+    val metricsByType: MutableMap<String, Statistics> = ConcurrentHashMap()
+    val totalKey = "total"
 
     @Synchronized
     fun processTicks(logEntries: List<LogEntry>) {
@@ -17,21 +19,34 @@ class MetricsAggregator {
             }
 
             // Create new statistics entry
-            if (!metrics[logEntry.tick]!!.containsKey("total")) {
-                metrics[logEntry.tick]!!["total"] = Statistics(10000)
+            if (!metrics[logEntry.tick]!!.containsKey(totalKey)) {
+                metrics[logEntry.tick]!![totalKey] = Statistics(10000)
+            }
+
+            // Add a statistics entry
+            if (!metricsByType.containsKey(totalKey)) {
+                metricsByType[totalKey] = Statistics()
             }
 
             // Add the total
-            metrics[logEntry.tick]!!["total"]!!.addValue(logEntry.total.toDouble() / 1000000)
+            metrics[logEntry.tick]!![totalKey]!!.addValue(logEntry.total.toDouble() / 1000000)
+            metricsByType["total"]!!.addValue(logEntry.total.toDouble() / 1000000)
 
             val logEntryEntries = logEntry.entries.toTypedArray().copyOf()
+
             // For each entry add new stat
             for (entry in logEntryEntries) {
                 if (!metrics[logEntry.tick]!!.containsKey(entry.first)) {
                     metrics[logEntry.tick]!![entry.first] = Statistics()
                 }
 
+                // Add a statistics entry
+                if (!metricsByType.containsKey(entry.first)) {
+                    metricsByType[entry.first] = Statistics()
+                }
+
                 metrics[logEntry.tick]!![entry.first]!!.addValue(entry.second.toDouble() / 1000000)
+                metricsByType[entry.first]!!.addValue(entry.second.toDouble() / 1000000)
             }
         }
     }

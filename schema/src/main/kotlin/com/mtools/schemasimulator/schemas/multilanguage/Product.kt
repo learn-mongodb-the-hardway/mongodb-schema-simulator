@@ -55,6 +55,7 @@ class Product(
         name = product.getString("name")
         cost = _cost.bigDecimalValue()
         currency = product.getString("currency")
-        categories = product    ["categories"] as List<Document>
+        @Suppress("UNCHECKED_CAST")
+        categories = product["categories"] as List<Document>
     }
 }

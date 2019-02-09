@@ -35,6 +35,7 @@ class CacheTest {
         ))).firstOrNull()
         assertNotNull(doc)
 
+        @Suppress("UNCHECKED_CAST")
         val data = doc?.get("data") as List<Document>
         assertEquals(5, data.size)
         assertEquals(2, data[0].getInteger("a"))
@@ -60,6 +61,7 @@ class CacheTest {
         ))).firstOrNull()
         assertNotNull(doc)
 
+        @Suppress("UNCHECKED_CAST")
         val data = doc?.get("data") as List<Document>
         assertEquals(3, data.size)
         assertEquals(2, data[0].getInteger("a"))

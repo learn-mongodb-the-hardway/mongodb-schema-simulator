@@ -70,6 +70,7 @@ class ShoppingCart(
         }
 
         // Go over all the products in the cart
+        @Suppress("UNCHECKED_CAST")
         val products = cart.get("products") as List<Document>
         val failedReservations = mutableListOf<Document>()
         val successfulReservations = mutableListOf<Document>()
@@ -161,6 +162,7 @@ class ShoppingCart(
             ),
             "state" to "active"
         ))).forEach { cart ->
+            @Suppress("UNCHECKED_CAST")
             val products = cart["products"] as List<Document>
             products.forEach { product ->
 

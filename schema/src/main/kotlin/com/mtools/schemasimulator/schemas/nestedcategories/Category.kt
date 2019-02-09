@@ -72,7 +72,6 @@ class Category(
         allowUsageOfCoveredIndex: Boolean = false) : List<Category> = find(
             "findAllDirectChildCategories",
             BsonRegularExpression("^$path$"),
-            path,
             allowUsageOfCoveredIndex
         )
 
@@ -84,14 +83,12 @@ class Category(
         allowUsageOfCoveredIndex: Boolean = false) : List<Category> = find(
         "findAllChildCategories",
             BsonRegularExpression("^$path"),
-            path,
             allowUsageOfCoveredIndex
         )
 
     private fun find(
         method: String,
         regexp: BsonRegularExpression,
-        path: String,
         allowUsageOfCoveredIndex: Boolean = false) : List<Category> {
         var results = listOf<Category>()
 

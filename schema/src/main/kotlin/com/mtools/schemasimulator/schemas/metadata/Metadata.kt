@@ -74,6 +74,7 @@ class Metadata(
                 .withReadPreference(readPreference)
                 .find(query)
                 .map {
+                    @Suppress("UNCHECKED_CAST")
                     Metadata(logEntry, metadatas, it["_id"]!!, it["metadata"] as List<Document>)
                 }.toList()
         }

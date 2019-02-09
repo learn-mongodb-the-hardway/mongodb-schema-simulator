@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 import kotlin.test.assertNotNull
 
+@Suppress("UNCHECKED_CAST")
 class NoReservationShoppingCartTest {
     @Test
     fun successfulAddProductToShoppingCartTest() {

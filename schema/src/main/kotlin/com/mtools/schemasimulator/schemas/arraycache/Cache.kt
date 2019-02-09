@@ -42,9 +42,9 @@ class Cache(
         ))
 
         // We provided a position for adding the items in the cache
-        if (position != null) {
-            val data = pushOperation["data"] as MutableMap<String, Any>
-            data["\$position"] = position
+        if (position != null && pushOperation["data"] is MutableMap<*, *>) {
+            @Suppress("UNCHECKED_CAST")
+            (pushOperation["data"] as MutableMap<String, Any>)["\$position"] = position
         }
 
         val result = cache.updateOne(
