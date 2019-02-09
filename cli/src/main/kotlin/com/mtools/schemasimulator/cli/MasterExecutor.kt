@@ -33,7 +33,8 @@ data class MasterExecutorConfig (
     val graphOutputDPI: Int = 300,
     val waitMSBetweenReconnectAttempts: Long = 1000,
     val configurationMethod: String = "configure",
-    val graphFilters: List<String> = listOf())
+    val graphFilters: List<String> = listOf(),
+    val skipTicks: Int = 0)
 
 class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
     private val metricsAggregator = MetricsAggregator()
@@ -157,11 +158,9 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
             simulations.values.first().javaClass.simpleName,
             config.graphOutputFilePath,
             config.graphOutputDPI,
-            config.graphFilters
-        ).generate(
-            metricsAggregator.metrics,
-            metricsAggregator.metricsByType
-        )
+            config.graphFilters,
+            config.skipTicks
+        ).generate(metricsAggregator)
 
         logger.info { "Finished executing simulation, terminating" }
     }

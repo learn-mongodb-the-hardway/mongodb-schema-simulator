@@ -40,7 +40,7 @@ class ExecutorTest {
         val executor = MasterExecutor(MasterExecutorConfig(
             master = true,
             uri = URI.create("http://127.0.0.1:14500"),
-            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/TransactionScenario.kt")).readText(),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_twophase/TransactionScenario.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/TransactionScenario.png"),
             graphOutputDPI = 300,
             configurationMethod = "configureTransactions",
@@ -57,15 +57,59 @@ class ExecutorTest {
 
     @Test
     @Disabled
-    fun executeMongoTransaction() {
+    fun executeMongoTransactionLocal() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
             master = true,
             uri = URI.create("http://127.0.0.1:14500"),
-            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/MongoTransactionScenario.kt")).readText(),
-            graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenario.png"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioLocal.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioLocal.png"),
             graphOutputDPI = 300,
-            configurationMethod = "configureMongoTransactions",
+            configurationMethod = "configure",
+            graphFilters = listOf("total")
+        ))
+
+        val masterThread = Thread(Runnable {
+            executor.start()
+        })
+
+        masterThread.start()
+        masterThread.join()
+    }
+
+    @Test
+    @Disabled
+    fun executeMongoTransactionMajority() {
+        // Setup master
+        val executor = MasterExecutor(MasterExecutorConfig(
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioMajority.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioMajority.png"),
+            graphOutputDPI = 300,
+            configurationMethod = "configure",
+            graphFilters = listOf("total")
+        ))
+
+        val masterThread = Thread(Runnable {
+            executor.start()
+        })
+
+        masterThread.start()
+        masterThread.join()
+    }
+
+    @Test
+    @Disabled
+    fun executeMongoTransactionSnapshot() {
+        // Setup master
+        val executor = MasterExecutor(MasterExecutorConfig(
+            master = true,
+            uri = URI.create("http://127.0.0.1:14500"),
+            config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioSnapshot.kt")).readText(),
+            graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioSnapshot.png"),
+            graphOutputDPI = 300,
+            configurationMethod = "configure",
             graphFilters = listOf("total")
         ))
 

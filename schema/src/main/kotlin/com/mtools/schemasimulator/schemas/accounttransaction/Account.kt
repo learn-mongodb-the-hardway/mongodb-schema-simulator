@@ -3,6 +3,7 @@ package com.mtools.schemasimulator.schemas.accounttransaction
 import com.mongodb.MongoClient
 import com.mongodb.MongoCommandException
 import com.mongodb.MongoException
+import com.mongodb.TransactionOptions
 import com.mongodb.client.ClientSession
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Indexes
@@ -52,7 +53,11 @@ class Account(logEntry: LogEntry,
     /*
      * Transfer an amount to this account from the provided account
      */
-    fun transfer(toAccount: Account, amount: BigDecimal) = log("transfer") {
+    fun transfer(
+        toAccount: Account,
+        amount: BigDecimal,
+        transactionOptions: TransactionOptions = TransactionOptions.builder().build()
+    ) = log("transfer") {
         // Throw an error if it's the same account
         if (name == toAccount.name) {
             throw SchemaSimulatorException("Attempting to credit and debit the same account from[$name] to[${toAccount.name}]")
@@ -93,7 +98,7 @@ class Account(logEntry: LogEntry,
 
                     // Retry the transaction by aborting the current one and starting a new one
                     if (mongoException.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)) {
-                        session.abortTransaction()
+                        if (session.hasActiveTransaction()) session.abortTransaction()
                         continue
                     }
 
@@ -104,7 +109,7 @@ class Account(logEntry: LogEntry,
 
                 // Retry the transaction by aborting the current one and starting a new one
                 if (exception.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL)) {
-                    session.abortTransaction()
+                    if (session.hasActiveTransaction()) session.abortTransaction()
                     continue
                 }
             }

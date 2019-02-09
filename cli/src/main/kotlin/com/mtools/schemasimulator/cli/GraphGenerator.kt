@@ -1,6 +1,6 @@
 package com.mtools.schemasimulator.cli
 
-import com.mtools.schemasimulator.stats.Statistics
+import com.mtools.schemasimulator.logger.MetricsAggregator
 import org.knowm.xchart.BitmapEncoder
 import org.knowm.xchart.XYChartBuilder
 import org.knowm.xchart.XYSeries
@@ -9,51 +9,47 @@ import org.knowm.xchart.style.markers.SeriesMarkers
 import java.io.File
 import java.text.DecimalFormat
 
+class GraphGenerator(
+    private val name:String,
+    private val outputPath: File,
+    private val dpi: Int,
+    private val filters: List<String> = listOf(),
+    private val skipTicks: Int = 0
+) {
+    private val df = DecimalFormat("#.00")
 
-
-class GraphGenerator(private val name:String, private val outputPath: File, private val dpi: Int, private val filters: List<String> = listOf()) {
-    val df = DecimalFormat("#.00")
-
-    fun generate(
-        entries: Map<Long, Map<String, Statistics>>,
-        metricsByType: MutableMap<String, Statistics>
-    ) {
+    fun generate(aggregator: MetricsAggregator) {
         // Go over all the keys
-        val keys = entries.keys.sorted()
-        var max = 0.0
-        var min = 0.0
-        var percentile95 = 0.0
-        var percentile99 = 0.0
-        var mean = 0.0
+        val keys = aggregator.keys.sorted()
 
         // Data per field
         val dataByStep = mutableMapOf<String, Pair<MutableList<Long>, MutableList<Double>>>()
 
         // Generate series for each step
         keys.forEach { key ->
-            entries.getValue(key)
-                .entries
-                .filter { filters.isEmpty() || filters.contains(it.key) }
-                .forEach { entry ->
+            if (key >= skipTicks) {
+                aggregator.entries(key)
+                    .entries
+                    .filter { filters.isEmpty() || filters.contains(it.key) }
+                    .forEach { entry ->
 
-                if (!dataByStep.containsKey(entry.key)) {
-                    dataByStep[entry.key] = Pair(mutableListOf(), mutableListOf())
-                }
+                        if (!dataByStep.containsKey(entry.key)) {
+                            dataByStep[entry.key] = Pair(mutableListOf(), mutableListOf())
+                        }
 
-                dataByStep[entry.key]!!.first.add(key)
-                dataByStep[entry.key]!!.second.add(if(entry.value.mean == 0.0) 1.0 else entry.value.mean)
+                        dataByStep[entry.key]!!.first.add(key)
+                        dataByStep[entry.key]!!.second.add(if(entry.value.mean == 0.0) 1.0 else entry.value.mean / 1000000)
+                    }
             }
         }
 
-        // Get total values
-        if (metricsByType.containsKey("total")) {
-            val total = metricsByType.getValue("total")
-            min = total.min
-            max = total.max
-            percentile95 = total.percentile(95.0)
-            percentile99 = total.percentile(99.0)
-            mean = total.mean
-        }
+        // Get descriptive instance of special label
+        val overallStats = aggregator.aggregate("total", skipTicks)
+        val min = overallStats.min / 1000000
+        val max = overallStats.max / 1000000
+        val percentile95 = overallStats.getPercentile(95.0) / 1000000
+        val percentile99 = overallStats.getPercentile(99.0) / 1000000
+        val mean = overallStats.mean / 1000000
 
         // Create Chart
         val chart = XYChartBuilder()

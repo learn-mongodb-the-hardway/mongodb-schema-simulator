@@ -1,6 +1,9 @@
-package local
+package local6
 
 import com.mongodb.MongoClient
+import com.mongodb.ReadConcern
+import com.mongodb.TransactionOptions
+import com.mongodb.WriteConcern
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.cli.config.Config
@@ -89,8 +92,11 @@ class MongoTransactionSimulation(private val numberOfAccounts: Int = 100) : Simu
         account1.reload()
         account2.reload()
 
-        // Perform a transfer of 100
-        account1.transfer(account2, BigDecimal(1))
+        // Perform a transfer of 1
+        account1.transfer(account2, BigDecimal(1), TransactionOptions.builder()
+            .readConcern(ReadConcern.MAJORITY)
+            .writeConcern(WriteConcern.MAJORITY)
+            .build())
     }
 
     override fun after(client: MongoClient) {
@@ -100,17 +106,17 @@ class MongoTransactionSimulation(private val numberOfAccounts: Int = 100) : Simu
     }
 }
 
-fun configureMongoTransactions() : Config {
+fun configure() : Config {
     val tickResolution = 1L
 //    val numberOfTicks = 300L
 //    val numberOfTicks = 3000L
-//    val numberOfTicks = 30000L
-    val numberOfTicks = 30000L * 2 * 3
+    val numberOfTicks = 35000L
+//    val numberOfTicks = 30000L * 2 * 3
     val numberOfDocuments = 1500
 
     return config {
         mongodb {
-            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000&w=majority")
             db("integration_tests")
         }
 

@@ -1,26 +1,29 @@
-package local
+package local4
 
 import com.mongodb.MongoClient
+import com.mongodb.ReadConcern
+import com.mongodb.TransactionOptions
+import com.mongodb.WriteConcern
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mtools.schemasimulator.cli.config.Config
+import com.mtools.schemasimulator.cli.config.config
 import com.mtools.schemasimulator.executor.Simulation
 import com.mtools.schemasimulator.executor.SimulationOptions
 import com.mtools.schemasimulator.logger.LogEntry
-import org.bson.Document
-import com.mtools.schemasimulator.cli.config.config
-import com.mtools.schemasimulator.schemas.account.Account
-import com.mtools.schemasimulator.schemas.account.Transaction
+import com.mtools.schemasimulator.schemas.accounttransaction.Account
+import com.mtools.schemasimulator.schemas.accounttransaction.Transaction
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.AccountDataGenerator
 import com.mtools.schemasimulator.schemas.shoppingcartreservation.AccountDataGeneratorOptions
-import org.bson.types.ObjectId
+import org.bson.Document
 import java.math.BigDecimal
 
-class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulation(SimulationOptions(iterations = 10)) {
+class MongoTransactionSimulation(private val numberOfAccounts: Int = 100) : Simulation(SimulationOptions(iterations = 10)) {
     override fun init(client: MongoClient) {
         this.client = client
         // Drop the database
         client.getDatabase("integration_tests").drop()
+
         // Get the collections
         db = client.getDatabase("integration_tests")
 
@@ -37,10 +40,10 @@ class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulatio
             numberOfAccounts = numberOfAccounts
         ))
 
-        createIndexes(Account(LogEntry("", 0), accounts, transactions, "Joe", BigDecimal(0)))
-        createIndexes(Transaction(LogEntry("", 0), accounts, transactions, ObjectId(),
-            Account(LogEntry("", 0), accounts, transactions, "Joe", BigDecimal(0)),
-            Account(LogEntry("", 0), accounts, transactions, "Joe", BigDecimal(0)),
+        createIndexes(Account(LogEntry("", 0), client, accounts, transactions, "Joe", BigDecimal(0)))
+        createIndexes(Transaction(LogEntry("", 0), transactions,
+            Account(LogEntry("", 0), client, accounts, transactions, "Joe", BigDecimal(0)),
+            Account(LogEntry("", 0), client, accounts, transactions, "Joe", BigDecimal(0)),
             BigDecimal(100)))
     }
 
@@ -48,7 +51,7 @@ class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulatio
     private lateinit var db: MongoDatabase
     private lateinit var accounts: MongoCollection<Document>
     private lateinit var transactions: MongoCollection<Document>
-    private lateinit var accountNames: List<String>
+    private var accountNames: MutableList<String> = mutableListOf()
     private var index1 = 0
     private var index2 = 1
 
@@ -63,7 +66,7 @@ class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulatio
         transactions = db.getCollection("transactions")
 
         // Read all the account names so we can use them to perform transactions
-        accountNames = accounts.find().map { it.getString("name") }.toList()
+        accountNames = accounts.find().map { it.getString("name") }.toMutableList()
     }
 
     override fun before(client: MongoClient) {
@@ -82,15 +85,18 @@ class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulatio
         }
 
         // Retrieve the accounts
-        val account1 = Account(logEntry, accounts, transactions, name1, BigDecimal(0))
-        val account2 = Account(logEntry, accounts, transactions, name2, BigDecimal(0))
+        val account1 = Account(logEntry, client, accounts, transactions, name1, BigDecimal(0))
+        val account2 = Account(logEntry, client, accounts, transactions, name2, BigDecimal(0))
 
         // Refresh the accounts
         account1.reload()
         account2.reload()
 
-        // Perform a transfer of 100
-        account1.transfer(account2, BigDecimal(1))
+        // Perform a transfer of 1
+        account1.transfer(account2, BigDecimal(1), TransactionOptions.builder()
+            .readConcern(ReadConcern.LOCAL)
+            .writeConcern(WriteConcern.MAJORITY)
+            .build())
     }
 
     override fun after(client: MongoClient) {
@@ -100,17 +106,18 @@ class TransactionSimulation(private val numberOfAccounts: Int = 100) : Simulatio
     }
 }
 
-fun configureTransactions() : Config {
+fun configure() : Config {
     val tickResolution = 1L
-    //val numberOfTicks = 500L
+//    val numberOfTicks = 300L
 //    val numberOfTicks = 3000L
-//    val numberOfTicks = 30000L
-    val numberOfTicks = 30000L * 2 * 3
+    val numberOfTicks = 35000L
+//    val numberOfTicks = 30000L * 2 * 3
     val numberOfDocuments = 1500
+//    val numberOfDocuments = 50
 
     return config {
         mongodb {
-            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000")
+            url("mongodb://127.0.0.1:27017/?connectTimeoutMS=1000&w=majority")
             db("integration_tests")
         }
 
@@ -136,7 +143,7 @@ fun configureTransactions() : Config {
 
                 // Simulation
                 simulation(
-                    TransactionSimulation(numberOfAccounts = numberOfDocuments)
+                    MongoTransactionSimulation(numberOfAccounts = numberOfDocuments)
                 )
             }
 
@@ -155,7 +162,7 @@ fun configureTransactions() : Config {
 
                 // Simulation
                 simulation(
-                    TransactionSimulation(numberOfAccounts = numberOfDocuments)
+                    MongoTransactionSimulation(numberOfAccounts = numberOfDocuments)
                 )
             }
         }
