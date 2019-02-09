@@ -28,7 +28,7 @@ class Account(logEntry: LogEntry,
     override fun indexes(): List<Index> {
         return listOf(
             Index(accounts.namespace.databaseName, accounts.namespace.collectionName,
-                Indexes.ascending("name")
+                Indexes.ascending("name", "pendingTransactions")
             )
         )
     }
@@ -166,7 +166,11 @@ class Transaction(
     val toAccount: Account,
     val amount: BigDecimal) : Scenario(logEntry) {
     override fun indexes(): List<Index> {
-        return listOf()
+        return listOf(
+            Index(transactions.namespace.databaseName, transactions.namespace.collectionName,
+                Indexes.ascending("name", "pendingTransactions")
+            )
+        )
     }
 
     var state: TransactionStates = TransactionStates.UNKNOWN
