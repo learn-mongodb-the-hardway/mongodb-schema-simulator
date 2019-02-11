@@ -162,6 +162,7 @@ class Account(logEntry: LogEntry,
         if (result.isModifiedCountAvailable
             && result.modifiedCount == 0L) {
             session.abortTransaction()
+            throw SchemaSimulatorException("Failed to credit account [$name] with amount [$amount]")
         }
     }
 
@@ -180,6 +181,7 @@ class Account(logEntry: LogEntry,
         if (result.isModifiedCountAvailable
             && result.modifiedCount == 0L) {
             session.abortTransaction()
+            throw SchemaSimulatorException("Failed to debit account [$name] with amount [$amount]")
         }
     }
 
