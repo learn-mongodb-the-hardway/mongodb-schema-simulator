@@ -67,22 +67,24 @@ class Account(logEntry: LogEntry,
 
         fun retry(session: ClientSession) : MongoException? {
             while (true) {
-                return try {
+                try {
                     session.commitTransaction()
-                    null
+                    break
                 } catch (exception:MongoException) {
                     if (exception.hasErrorLabel(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL)) {
                         continue
                     }
 
-                    exception
+                    return exception
                 }
             }
+
+            return null
         }
 
         while (true) {
             try {
-                session.startTransaction()
+                session.startTransaction(transactionOptions)
                 // Debit current transaction
                 debit(session, amount)
                 // Credit the target account
@@ -112,6 +114,8 @@ class Account(logEntry: LogEntry,
                     if (session.hasActiveTransaction()) session.abortTransaction()
                     continue
                 }
+
+                throw exception
             }
         }
 

@@ -12,7 +12,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionLocal() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioLocal.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioLocal.png"),
@@ -34,7 +34,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionLocalMajority() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioLocalMajority.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioLocalMajority.png"),
@@ -56,7 +56,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionMajority() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioMajority.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioMajority.png"),
@@ -78,7 +78,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionMajorityMajority() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioMajorityMajority.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioMajorityMajority.png"),
@@ -100,7 +100,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionSnapshot() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioSnapshot.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioSnapshot.png"),
@@ -122,7 +122,7 @@ class AccountTransactionSimulationTest {
     fun executeMongoTransactionSnapshotMajority() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_transaction/MongoTransactionScenarioSnapshotMajority.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/MongoTransactionScenarioSnapshotMajority.png"),

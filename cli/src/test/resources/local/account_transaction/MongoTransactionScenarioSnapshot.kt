@@ -135,9 +135,9 @@ fun configure() : Config {
                 constant {
                     // Each tick produces two concurrently
                     // executed instances of the simulation
-                    numberOfCExecutions(2)
+                    numberOfCExecutions(1)
                     // Execute every 100 milliseconds
-                    executeEveryMilliseconds(2)
+                    executeEveryMilliseconds(1)
                 }
 
                 // Simulation
@@ -146,24 +146,24 @@ fun configure() : Config {
                 )
             }
 
-            // Local running worker thread
-            local {
-                name("local2")
-
-                // Constant Load Pattern
-                constant {
-                    // Each tick produces two concurrently
-                    // executed instances of the simulation
-                    numberOfCExecutions(2)
-                    // Execute every 100 milliseconds
-                    executeEveryMilliseconds(4)
-                }
-
-                // Simulation
-                simulation(
-                    MongoTransactionSimulation(numberOfAccounts = numberOfDocuments)
-                )
-            }
+//            // Local running worker thread
+//            local {
+//                name("local2")
+//
+//                // Constant Load Pattern
+//                constant {
+//                    // Each tick produces two concurrently
+//                    // executed instances of the simulation
+//                    numberOfCExecutions(2)
+//                    // Execute every 100 milliseconds
+//                    executeEveryMilliseconds(1)
+//                }
+//
+//                // Simulation
+//                simulation(
+//                    MongoTransactionSimulation(numberOfAccounts = numberOfDocuments)
+//                )
+//            }
         }
     }
 }

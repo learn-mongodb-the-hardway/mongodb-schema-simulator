@@ -7,8 +7,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import java.util.concurrent.ConcurrentHashMap
 
 class MetricsAggregator {
-    val metrics: MutableMap<Long, ConcurrentHashMap<String, Statistics>> = ConcurrentHashMap()
-//    private val metricsByType: MutableMap<String, Statistics> = ConcurrentHashMap()
+    private val metrics: MutableMap<Long, ConcurrentHashMap<String, Statistics>> = ConcurrentHashMap()
     private val totalKey = "total"
 
     val keys: Set<Long>
@@ -27,14 +26,10 @@ class MetricsAggregator {
                 metrics[logEntry.tick]!![totalKey] = Statistics(10000)
             }
 
-//            // Add a statistics entry
-//            if (!metricsByType.containsKey(totalKey)) {
-//                metricsByType[totalKey] = Statistics()
-//            }
-
             // Add the total
-            metrics[logEntry.tick]!![totalKey]!!.addValue(logEntry.total.toDouble())
-//            metricsByType["total"]!!.addValue(logEntry.total.toDouble())
+            if (logEntry.total > 0) {
+                metrics[logEntry.tick]!![totalKey]!!.addValue(logEntry.total.toDouble())
+            }
 
             val logEntryEntries = logEntry.entries.toTypedArray().copyOf()
 
@@ -44,13 +39,9 @@ class MetricsAggregator {
                     metrics[logEntry.tick]!![entry.first] = Statistics()
                 }
 
-//                // Add a statistics entry
-//                if (!metricsByType.containsKey(entry.first)) {
-//                    metricsByType[entry.first] = Statistics()
-//                }
-
-                metrics[logEntry.tick]!![entry.first]!!.addValue(entry.second.toDouble())
-//                metricsByType[entry.first]!!.addValue(entry.second.toDouble())
+                if (entry.second > 0) {
+                    metrics[logEntry.tick]!![entry.first]!!.addValue(entry.second.toDouble())
+                }
             }
         }
     }
@@ -83,7 +74,9 @@ class MetricsAggregator {
             if (key >= skipTicks) {
                 if (map.containsKey(label)) {
                     map.getValue(label).values.forEach {
-                        descriptiveStatistics.addValue(it)
+                        if (it > 0.0) {
+                            descriptiveStatistics.addValue(it)
+                        }
                     }
                 }
             }

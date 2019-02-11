@@ -11,7 +11,7 @@ class AccountTwoPhaseSimulation {
     fun executeW1() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_twophase/TransactionScenario.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/TransactionScenario.png"),
@@ -33,7 +33,7 @@ class AccountTwoPhaseSimulation {
     fun executeMajority() {
         // Setup master
         val executor = MasterExecutor(MasterExecutorConfig(
-            master = true,
+            master = false,
             uri = URI.create("http://127.0.0.1:14500"),
             config = InputStreamReader(ClassLoader.getSystemResourceAsStream("local/account_twophase/TransactionMajorityScenario.kt")).readText(),
             graphOutputFilePath = File("${System.getProperty("user.dir")}/TransactionMajorityScenario.png"),

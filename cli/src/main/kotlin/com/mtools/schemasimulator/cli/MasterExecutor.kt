@@ -111,8 +111,10 @@ class MasterExecutor(private val config: MasterExecutorConfig) : Executor {
         // Register all the remote workers
         masterExecutorServer.nonInitializedWorkers = LinkedBlockingDeque(workers.filterIsInstance<RemoteWorker>())
 
-        // Do we have the master flag enabled
-        masterExecutorServer.start()
+        // Do we have the master flag enabled, start the web server
+        if (config.master) {
+            masterExecutorServer.start()
+        }
 
         // Wait for all workers to be ready
         workers.forEach {
